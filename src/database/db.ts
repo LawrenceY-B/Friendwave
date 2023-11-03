@@ -4,11 +4,11 @@ import { environment } from "../environments/endpoints.config";
 
 export const DB_Connection = async () => {
     mongoose
-    .connect(`${process.env.MONGODBURL}`, {})
+    .connect(`${environment.DBUrl}`, {})
     .then(() => {
       console.log("MongoDB connected!!");
     })
-    .catch((err) => {
+    .catch((err: Error) => {
       console.log("Failed to connect to MongoDB", err);
     });
 };
