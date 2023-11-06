@@ -28,19 +28,17 @@ app
   })
   .use(auth(config))
   .use(ErrorHandler)
-  .use("/api", Authroutes)
+  .use("/api", Authroutes);
 
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 
-app.get( "/",async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      res.send(`Hello ${req.oidc.user!.name}, this is the admin section.`)
-      console.log(req.oidc.user) 
-    } catch (error) {
-      next(error);
-    }
+app.get("/", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.status(200).send(req.oidc.isAuthenticated());
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 app.all("*", (req: Request, res: Response) => {
   res.status(404).json({ message: "Page Not Found 😔" });

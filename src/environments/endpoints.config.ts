@@ -8,4 +8,5 @@ export const environment = {
   AUTH0BASEURL: String(process.env.AUTH0BASEURL),
   AUTH0CLIENTID: String(process.env.AUTH0CLIENTID),
   ISSUERBASEURL: String(process.env.ISSUERBASEURL),
+  JWTKEY: String(process.env.JWTKEY),
 };
