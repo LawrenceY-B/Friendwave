@@ -5,6 +5,7 @@ import { DB_Connection } from "./database/db";
 import { auth, requiresAuth } from "express-openid-connect";
 import { ErrorHandler } from "./middleware/errorhandler";
 import Authroutes from "./routes/auth.routes";
+import UserRoutes from "./routes/user.routes";
 
 const app = express();
 const config = {
@@ -16,19 +17,21 @@ const config = {
   issuerBaseURL: `${environment.ISSUERBASEURL}`,
 };
 app
-  .use(express.json())
   .use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH");
+    res.setHeader("Accept", "application/json");
     res.setHeader(
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization"
     );
     next();
   })
-  .use(auth(config))
+  .use(express.json())
   .use(ErrorHandler)
-  .use("/api", Authroutes);
+  .use(auth(config))
+  .use("/api", Authroutes)
+  .use("/api/users", UserRoutes);
 
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 

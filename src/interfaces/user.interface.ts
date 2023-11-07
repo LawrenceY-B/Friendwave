@@ -1,18 +1,27 @@
+import { Schema } from "mongoose";
 export interface IUser{
-UserID: string;
+UserID:Schema.Types.ObjectId
+Auth0ID: string;
 Username: string;
 Email: string;
 EmailVerified: boolean;
 Password: string;
 ProfileUrl: string;
 Bio: string;
-Followers: any;
-Followings: any;
+Followers: string;
+Followings: string;
 Posts:any;
 Likes: any;
 Comments: any;
 SavedPosts:any
 
+}
+export interface IFollowing{
+    userID: Schema.Types.ObjectId
+    followingID: Schema.Types.ObjectId
+}export interface IFollower{
+    userID:Schema.Types.ObjectId
+    followerID: Schema.Types.ObjectId
 }
 
 // {
