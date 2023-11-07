@@ -20,8 +20,9 @@ export const newFollow = async (
     const { FollowingID } = req.body;
     const UserID = req.user.userID;
     console.log(UserID, FollowingID);
-    if (UserID === FollowingID)
-      res.status(400).json({ success: true, message: "Can't follow self" });
+    if (UserID === FollowingID) {
+      return res.status(400).json({ success: false, message: "Can't follow self" });
+    }
 
     const following = await Following.findOne({
       userID: UserID,
@@ -61,7 +62,7 @@ export const newFollow = async (
   }
 };
 
-export const removeFollow = async (
+export const unFollow = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -120,10 +121,15 @@ export const getFollowing = async (
       .select("-_id -__v");
     res.status(200).json({ success: true, following: following });
   } catch (err: any) {
-    next(err);  }
+    next(err);
+  }
 };
 
-export const getFollowers = async (req:Request, res:Response, next:NextFunction)=>{
+export const getFollowers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const followers = await Follower.find({
       userID: req.user.userID,
@@ -141,4 +147,34 @@ export const getFollowers = async (req:Request, res:Response, next:NextFunction)
   } catch (err: any) {
     next(err);
   }
-}
+};
+export const removeFollow = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { FollowerID } = req.body;
+    const UserID = req.user.userID;
+    const follower = await Follower.findOneAndDelete({
+      userID: UserID,
+      followerID: FollowerID,
+    });
+    if (!follower)
+      res
+        .status(404)
+        .json({ success: false, message: "User not in followers list." });
+    try {
+      const following = await Following.findOneAndDelete({
+        followingID: UserID,
+        userID: FollowerID,
+      });
+    }catch (err) {
+      next(err);
+    }
+
+    res.status(200).json({ success: true, message: "Removed." });
+  } catch (error) {
+    next(error);
+  }
+};
