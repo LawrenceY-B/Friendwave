@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import User from "../models/user.model";
 import Following from "../models/following.model";
-import { validateFollow } from "../services/user.service";
+import { validateBio, validateFollow } from "../services/user.service";
 import Follower from "../models/follower.model";
 import { Schema } from "mongoose";
 
@@ -21,7 +21,9 @@ export const newFollow = async (
     const UserID = req.user.userID;
     console.log(UserID, FollowingID);
     if (UserID === FollowingID) {
-      return res.status(400).json({ success: false, message: "Can't follow self" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Can't follow self" });
     }
 
     const following = await Following.findOne({
@@ -169,7 +171,7 @@ export const removeFollow = async (
         followingID: UserID,
         userID: FollowerID,
       });
-    }catch (err) {
+    } catch (err) {
       next(err);
     }
 
@@ -178,3 +180,60 @@ export const removeFollow = async (
     next(error);
   }
 };
+//find a way to update the id field 
+export const AddBio = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const UserID = req.user.userID;
+    const { error } = validateBio(req.body);
+    if (error) res.status(400).json({ success: false, message: error.message });
+    const { Bio } = req.body;
+    const user = await User.findByIdAndUpdate(
+     UserID,
+      { Bio: Bio },
+      { new: true, upsert: true }
+    );
+    if (!user)
+      res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    user.save();
+    res.status(200).json({ success: true, message: "Bio Updated" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteBio = async (  req: Request,
+  res: Response,
+  next: NextFunction)=>{
+
+  try {
+    const UserID = req.user.userID;
+    const user = await User.findOneAndUpdate(
+     {UserID:UserID},
+      { Bio: "" },
+      { new: true, upsert: true }
+    );
+    if (!user)
+      res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    user.save();
+    res.status(200).json({ success: true, message: "Bio Deleted" });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// export const getUser = (req: Request, res: Response, next: NextFunction) => {
+//   try {
+//     const UserID = req.user.userID;
+//    const userData = User.findById(UserID).populate.select("-_id -__v");
+//   } catch (error) {
+    
+//   }
+// }

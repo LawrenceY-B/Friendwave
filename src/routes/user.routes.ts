@@ -1,7 +1,7 @@
 import multer from "multer";
 import {Router} from "express";
 import { verifyToken } from "../middleware/isAuthorized";
-import { getFollowers, getFollowing, newFollow, removeFollow, unFollow } from "../controllers/user";
+import { getFollowers, getFollowing, newFollow, removeFollow, unFollow, AddBio, deleteBio } from "../controllers/user";
 
 
 // const storage= multer.memoryStorage();
@@ -13,6 +13,8 @@ import { getFollowers, getFollowing, newFollow, removeFollow, unFollow } from ".
  UserRoutes.get('/getFollowing',verifyToken, getFollowing)
  UserRoutes.get('/getFollowers',verifyToken, getFollowers)
  UserRoutes.post('/removeFollower',verifyToken, removeFollow)
+ UserRoutes.post('/addBio',verifyToken, AddBio)
+ UserRoutes.delete('/deleteBio',verifyToken, deleteBio)
 //  UserRoutes.get('/register', verifyToken)
 
 
