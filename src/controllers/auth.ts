@@ -19,6 +19,7 @@ export const Login = async (
         Email: req.oidc.user!.email,
         EmailVerified: req.oidc.user!.email_verified,
         ProfileUrl: req.oidc.user!.picture,
+        // Bio:"",
       });
       if (result) {
         const token = jwt.sign(
@@ -32,7 +33,7 @@ export const Login = async (
             expiresIn: "7d",
           }
         );
-        
+        const addID=await User.findByIdAndUpdate(result?._id,{UserID:result?._id})
         res
           .status(200)
           .json({ message: "User created successfully", token: token, userID: result?._id });
