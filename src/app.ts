@@ -3,7 +3,7 @@ import { environment } from "./environments/endpoints.config";
 import { Server } from "http";
 import { DB_Connection } from "./database/db";
 import { auth, requiresAuth } from "express-openid-connect";
-import { ErrorHandler } from "./middleware/errorhandler";
+import ErrorHandler from "./middleware/errorhandler";
 import Authroutes from "./routes/auth.routes";
 import UserRoutes from "./routes/user.routes";
 
@@ -28,7 +28,6 @@ app
     next();
   })
   .use(express.json())
-  .use(ErrorHandler)
   .use(auth(config))
   .use("/api", Authroutes)
   .use("/api/users", UserRoutes);
@@ -46,6 +45,7 @@ app.get("/", async (req: Request, res: Response, next: NextFunction) => {
 app.all("*", (req: Request, res: Response) => {
   res.status(404).json({ message: "Page Not Found 😔" });
 });
+app.use(ErrorHandler);
 
 const server: Server = app.listen(environment.PORT, async () => {
   await DB_Connection();

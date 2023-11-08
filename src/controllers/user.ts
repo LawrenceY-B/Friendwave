@@ -19,24 +19,27 @@ export const newFollow = async (
     }
     const { FollowingID } = req.body;
     const UserID = req.user.userID;
-    console.log(UserID, FollowingID);
     if (UserID === FollowingID) {
       return res
         .status(400)
         .json({ success: false, message: "Can't follow self" });
     }
 
-    const following = await Following.findOne({
+    const existingfollow = await Following.findOne({
       userID: UserID,
       followingID: FollowingID,
     });
-    if (!following) {
+    if (!existingfollow) {
       //follow the new user
       const following = new Following({
         userID: UserID,
         followingID: FollowingID,
       });
       await following.save();
+      //move following to the users model
+      const addFollowing = await User.findById(UserID);
+      addFollowing?.Followings.push(following.followingID);
+      await addFollowing!.save();
 
       //update the other individuals followers list with MongoID
       try {
@@ -48,7 +51,9 @@ export const newFollow = async (
           { userID: FollowingID, followerID: UserID },
           { new: true, upsert: true }
         );
-        // console.log(followers);
+        const addFollowers = await User.findById(FollowingID);
+        addFollowers?.Followers.push(followers?.followerID);
+        await addFollowers!.save();
       } catch (error) {
         next(error);
       }
@@ -78,30 +83,61 @@ export const unFollow = async (
     }
     const { FollowingID } = req.body;
     const UserID = req.user.userID;
-    // console.log(UserID, FollowingID);
+
+    // Remove the following from the user's model
     const following = await Following.findOneAndDelete({
       userID: UserID,
       followingID: FollowingID,
     });
+
     if (!following) {
       return res
         .status(404)
         .json({ success: false, message: "User not in following list." });
     }
+
+    const userData = following.userID;
+    const user = await User.findById(userData);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Couldn't find user" });
+    }
+
+    user.Followings = user.Followings.filter(
+      (followingId) => followingId !== FollowingID
+    );
+    await user.save();
+
+    // Remove the follower from the user's model
     try {
       const followers = await Follower.findOneAndDelete({
-        followerID: UserID,
         userID: FollowingID,
+        followerID: UserID,
+        
       });
-      console.log(followers);
+
+      if (followers) {
+        const userId = followers.userID;
+        const user = await User.findById(userId);
+
+        if (user) {
+          user.Followers = user.Followers.filter(
+            (followerId) => followerId !== UserID
+          );
+          await user.save();
+        }
+      }
     } catch (error) {
       next(error);
     }
+
     res.status(200).json({ success: true, message: "Not Following" });
   } catch (error) {
     next(error);
   }
 };
+
 
 export const getFollowing = async (
   req: Request,
@@ -180,7 +216,7 @@ export const removeFollow = async (
     next(error);
   }
 };
-//find a way to update the id field 
+//find a way to update the id field
 export const AddBio = async (
   req: Request,
   res: Response,
@@ -192,14 +228,12 @@ export const AddBio = async (
     if (error) res.status(400).json({ success: false, message: error.message });
     const { Bio } = req.body;
     const user = await User.findByIdAndUpdate(
-     UserID,
+      UserID,
       { Bio: Bio },
       { new: true, upsert: true }
     );
     if (!user)
-      res
-        .status(404)
-        .json({ success: false, message: "User not found." });
+      res.status(404).json({ success: false, message: "User not found." });
     user.save();
     res.status(200).json({ success: true, message: "Bio Updated" });
   } catch (error) {
@@ -207,33 +241,50 @@ export const AddBio = async (
   }
 };
 
-export const deleteBio = async (  req: Request,
+export const deleteBio = async (
+  req: Request,
   res: Response,
-  next: NextFunction)=>{
-
+  next: NextFunction
+) => {
   try {
     const UserID = req.user.userID;
     const user = await User.findOneAndUpdate(
-     {UserID:UserID},
+      { UserID: UserID },
       { Bio: "" },
       { new: true, upsert: true }
     );
     if (!user)
-      res
-        .status(404)
-        .json({ success: false, message: "User not found." });
+      res.status(404).json({ success: false, message: "User not found." });
     user.save();
     res.status(200).json({ success: true, message: "Bio Deleted" });
   } catch (error) {
     next(error);
   }
-}
+};
 
-// export const getUser = (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     const UserID = req.user.userID;
-//    const userData = User.findById(UserID).populate.select("-_id -__v");
-//   } catch (error) {
+export const getUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const UserID = req.user.userID;
+    const userData = await User.findOne({ UserID: UserID }).select(
+      "-_id -__v -EmailVerified"
+    );
+    res.status(200).json({ success: true, userData: userData });
+    if (!userData)
+      res.status(404).json({ success: false, message: "User not found" });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+export const editProfile = async(req:Request, res:Response, next:NextFunction) => {
+  try {
     
-//   }
-// }
+  } catch (error) {
+    next(error)
+  }
+}
