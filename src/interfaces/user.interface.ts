@@ -3,13 +3,14 @@ export interface IUser{
 UserID:Schema.Types.ObjectId
 Auth0ID: string;
 Username: string;
+Name: string;
 Email: string;
 EmailVerified: boolean;
 Password: string;
 ProfileUrl: string;
 Bio: string;
-Followers: string;
-Followings: string;
+Followers: any[];
+Followings: any[];
 Posts:any;
 Likes: any;
 Comments: any;

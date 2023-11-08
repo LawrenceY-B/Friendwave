@@ -1,28 +1,15 @@
-import { ErrorRequestHandler, NextFunction, Request, Response } from "express"
+import { Request, Response, NextFunction } from "express";
 import { environment } from "../environments/endpoints.config";
 
-class HttpError extends Error {
-    statusCode: number;
-
-    constructor(statusCode: number, message: string) {
-        super(message);
-        this.statusCode = statusCode;
-    }
-}
-
-export const ErrorHandler: ErrorRequestHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
-    let errStatus: number = 500;
-    let message: string = "Something went wrong";
-
-    if (err instanceof HttpError) {
-        errStatus = err.statusCode;
-        message = err.message;
-    }
-
-    res.status(errStatus).json({
+const ErrorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+    const status = err.statusCode || 500; // if no status code is provided, default to 500 (internal server error)
+    const message = err.message || "Something went wrong";
+    res.status(status).json({
         success: false,
-        errStatus,
+        status,
         message,
         stack: environment.PROD_ENV !== "development" ? {} : err.stack,
-    });
-};
+    })
+}
+
+export default ErrorHandler;

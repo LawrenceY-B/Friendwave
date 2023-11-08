@@ -9,17 +9,16 @@ export const Login = async (
   next: NextFunction
 ) => {
   try {
-    console.log(req.oidc.user);
     const user = await User.findOne({ Auth0ID: req.oidc.user!.sub });
 
     if (!user) {
       const result = await User.create({
         Auth0ID: req.oidc.user!.sub,
-        Username: req.oidc.user!.name,
+        Name: req.oidc.user!.name,
+        Username: req.oidc.user!.nickname,
         Email: req.oidc.user!.email,
         EmailVerified: req.oidc.user!.email_verified,
         ProfileUrl: req.oidc.user!.picture,
-        // Bio:"",
       });
       if (result) {
         const token = jwt.sign(
