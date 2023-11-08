@@ -9,4 +9,6 @@ export const environment = {
   AUTH0CLIENTID: String(process.env.AUTH0CLIENTID),
   ISSUERBASEURL: String(process.env.ISSUERBASEURL),
   JWTKEY: String(process.env.JWTKEY),
+  AWS_ACCESS_KEY: String(process.env.AWS_ACCESS_KEY),
+AWS_SECRET_ACCESS_KEY: String(process.env.AWS_SECRET_ACCESS_KEY),
 };

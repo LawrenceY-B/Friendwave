@@ -1,7 +1,12 @@
 import { NextFunction, Request, Response } from "express";
 import User from "../models/user.model";
 import Following from "../models/following.model";
-import { validateBio, validateFollow } from "../services/user.service";
+import {
+  ImageUpload,
+  validateBio,
+  validateFollow,
+  validateProfile,
+} from "../services/user.service";
 import Follower from "../models/follower.model";
 import { Schema } from "mongoose";
 
@@ -114,7 +119,6 @@ export const unFollow = async (
       const followers = await Follower.findOneAndDelete({
         userID: FollowingID,
         followerID: UserID,
-        
       });
 
       if (followers) {
@@ -137,7 +141,6 @@ export const unFollow = async (
     next(error);
   }
 };
-
 
 export const getFollowing = async (
   req: Request,
@@ -281,10 +284,34 @@ export const getUser = async (
   }
 };
 
-export const editProfile = async(req:Request, res:Response, next:NextFunction) => {
+export const editProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    
+    const { Name, Username, Bio } = req.body;
+    const image = req.file;
+    const UserID = req.user.userID;
+
+    const { error } = validateProfile(req.body);
+    if (error) res.status(400).json({ success: false, message: error.message });
+
+    let ImgUrl
+    if(image){
+      const link = await ImageUpload(image,next,UserID);
+      ImgUrl = link
+    }
+    const user = await User.findByIdAndUpdate(
+      UserID,
+      { Name: Name, Username: Username, Bio: Bio, ProfileUrl:ImgUrl },
+      { new: true, upsert: true }
+    );
+    if (!user)
+      res.status(404).json({ success: false, message: "User not found" });
+    user.save();
+    res.status(200).json({ success: true, message: "Profile Updated"});
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
