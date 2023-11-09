@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ALGORITHM_IDENTIFIER = exports.HOST_HEADER = exports.EXPIRES_QUERY_PARAM = exports.SIGNED_HEADERS_QUERY_PARAM = exports.AMZ_DATE_QUERY_PARAM = exports.CREDENTIAL_QUERY_PARAM = exports.ALGORITHM_QUERY_PARAM = exports.SHA256_HEADER = exports.UNSIGNED_PAYLOAD = void 0;
+exports.UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD";
+exports.SHA256_HEADER = "X-Amz-Content-Sha256";
+exports.ALGORITHM_QUERY_PARAM = "X-Amz-Algorithm";
+exports.CREDENTIAL_QUERY_PARAM = "X-Amz-Credential";
+exports.AMZ_DATE_QUERY_PARAM = "X-Amz-Date";
+exports.SIGNED_HEADERS_QUERY_PARAM = "X-Amz-SignedHeaders";
+exports.EXPIRES_QUERY_PARAM = "X-Amz-Expires";
+exports.HOST_HEADER = "host";
+exports.ALGORITHM_IDENTIFIER = "AWS4-HMAC-SHA256";

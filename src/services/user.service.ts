@@ -1,6 +1,11 @@
-import { S3, PutObjectCommand, S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3,
+  PutObjectCommand,
+  S3Client,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 
-import { Upload } from "@aws-sdk/lib-storage";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextFunction, Request } from "express";
 import joi from "joi";
 import { Schema } from "mongoose";
@@ -41,22 +46,22 @@ export const ImageUpload = async (
         secretAccessKey: `${environment.AWS_SECRET_ACCESS_KEY}`,
       },
       region: "eu-west-2",
-      
     });
+    const key = `/profile/${userid}${Date.now().toString()}${fileformat}`;
     let upload = new PutObjectCommand({
       Bucket: "fwstorage-trial",
-      Key: `${Date.now().toString()}${fileformat}`,
+      Key: `${key}`,
       Body: images.buffer,
-      // ACL: "public-read",
-    })
-const result = await awsS3.send(upload);
+    });
+    await awsS3.send(upload);
 
-let retrieve= await new GetObjectCommand({
-  Bucket: "fwstorage-trial",
-  Key: `${Date.now().toString()}${fileformat}`,
-})
-console.log(result);
-    return ;
+    let retrieve = new GetObjectCommand({
+      Bucket: "fwstorage-trial",
+      Key: `${key}`,
+    });
+    const signedUrl = await getSignedUrl(awsS3, retrieve);
+    console.log(signedUrl);
+    return signedUrl;
   } catch (err) {
     next(err);
   }
