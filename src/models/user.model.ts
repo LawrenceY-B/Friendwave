@@ -12,7 +12,7 @@ const UserSchema = new Schema<IUser>({
   Bio: { type: String},
   Followers: [{ type: String, ref: "Followers", }],
   Followings: [{ type: String, ref: "Following",}],
-  Posts: { type: Schema.Types.ObjectId, ref: "Posts",},
+  Posts: [{ type: Schema.Types.ObjectId, ref: "Posts",}],
   Likes: { type: Schema.Types.ObjectId, ref: "Likes",},
   Comments: { type: Schema.Types.ObjectId, ref: "Comments",},
   SavedPosts: { type: Schema.Types.ObjectId, ref: "SavedPosts",},

@@ -11,7 +11,7 @@ ProfileUrl: string;
 Bio: string;
 Followers: any[];
 Followings: any[];
-Posts:any;
+Posts:any[];
 Likes: any;
 Comments: any;
 SavedPosts:any
