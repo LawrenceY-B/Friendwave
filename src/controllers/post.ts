@@ -27,14 +27,15 @@ export const newPost = async (
     });
 
     await post.save();
-    const updateID = await Post.findByIdAndUpdate(post?._id, {
-      postId: post?._id,
-    });
-    // console.log(updateID);
 
+    const updatedPost = await Post.findOneAndUpdate(
+        { _id: post._id },
+        { $set: { postId: post._id } },
+        { new: true }
+      );
+    console.log(updatedPost);
     const updateUser = await User.findById(userId);
-    updateUser?.Posts.push(updateID?.postId);
-    console.log(updateID?.postId);
+    updateUser?.Posts.push(updatedPost?.postId);
     updateUser?.save();
 
     return res
