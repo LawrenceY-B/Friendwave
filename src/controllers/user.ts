@@ -8,7 +8,6 @@ import {
   validateProfile,
 } from "../services/user.service";
 import Follower from "../models/follower.model";
-import { Schema } from "mongoose";
 
 export const newFollow = async (
   req: Request,

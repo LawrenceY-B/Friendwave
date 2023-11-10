@@ -6,6 +6,7 @@ import { auth, requiresAuth } from "express-openid-connect";
 import ErrorHandler from "./middleware/errorhandler";
 import Authroutes from "./routes/auth.routes";
 import UserRoutes from "./routes/user.routes";
+import PostRoutes from "./routes/post.routes";
 
 const app = express();
 const config = {
@@ -30,7 +31,8 @@ app
   .use(express.json())
   .use(auth(config))
   .use("/api", Authroutes)
-  .use("/api/users", UserRoutes);
+  .use("/api/users", UserRoutes)
+  .use("/api/posts", PostRoutes);
 
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 
