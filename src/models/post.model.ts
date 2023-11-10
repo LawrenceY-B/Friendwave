@@ -2,7 +2,7 @@ import { Schema, model } from "mongoose";
 import { IPost } from "../interfaces/post.interface";
 
 const PostSchema = new Schema<IPost>({
-    postId:{type:String},
+    postId:{type:Schema.Types.ObjectId},
     userId:{type: Schema.Types.ObjectId, ref: "User", required: true},
     imageUrl:[{type:String}],
     caption:{type:String},
