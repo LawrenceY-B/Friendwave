@@ -15,6 +15,13 @@ export const validatePost = (caption: Request) => {
   });
   return schema.validate(caption);
 };
+export const validatePostID = (caption: Request) => {
+    const schema = joi.object({
+      postID: joi.string().min(6),
+    });
+    return schema.validate(caption);
+  };
+
 
 
 export const ImageUpload = async (
