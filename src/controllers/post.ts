@@ -66,7 +66,6 @@ export const deletePost = async (
     });
     if (deletePost) {
       const deletedpostID = deletePost.postId;
-      console.log(deletedpostID);
       const user = await User.findById(userId);
 
       if (user) {
@@ -83,6 +82,34 @@ export const deletePost = async (
     next(error);
   }
 };
+export const addLikes= async(
+  req: Request,
+  res:Response,
+  next: NextFunction
+)=>{
+try {
+  const userID = req.user.userID
+  const {PostID} =req.body
+
+  const isExisting = await Post.findOne({postId:PostID})
+  if (!isExisting) {
+    res.status(404).json({success: false, message:"Post not found"})
+  }
+  if (isExisting) {
+    isExisting?.likes.push(userID)
+    isExisting?.save()
+  }
+
+ 
+
+ res.status(200).json({success:true, message:`Successfully added`})
+
+} catch (error) {
+  next(error)
+}
+
+
+}
  // if (user){
       //     const index = user.Posts.indexOf(postId);
       //     user.Posts.splice(index,1);

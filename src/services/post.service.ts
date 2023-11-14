@@ -59,7 +59,6 @@ export const ImageUpload = async (
   
           return signedUrl;
         } catch (error) {
-          console.error("Error processing an image:", error);
             next(error);
         }
       });

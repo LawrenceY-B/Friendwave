@@ -60,7 +60,6 @@ export const ImageUpload = async (
       Key: `${key}`,
     });
     const signedUrl = await getSignedUrl(awsS3, retrieve);
-    console.log(signedUrl);
     return signedUrl;
   } catch (err) {
     next(err);

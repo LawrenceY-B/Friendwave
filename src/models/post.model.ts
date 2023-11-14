@@ -6,11 +6,11 @@ const PostSchema = new Schema<IPost>({
     userId:{type: Schema.Types.ObjectId, ref: "User", required: true},
     imageUrl:[{type:String}],
     caption:{type:String},
-    likes:[{type:Schema.Types.ObjectId,ref:"Like"}],
-    comments:[{type:Schema.Types.ObjectId,ref:"Comment"}],
+    likes:[{type:Schema.Types.ObjectId, ref:"User"}],
+    comments:[{type:Schema.Types.ObjectId, ref:"Comment"}],
     dateTime:{type:Date}
 });
 
-const Post = model<IPost>("Post", PostSchema);
+const Post = model<IPost>("Posts", PostSchema);
 
 export default Post
