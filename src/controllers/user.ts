@@ -271,14 +271,20 @@ export const getUser = async (
 ) => {
   try {
     const UserID = req.user.userID;
-    const userData = await User.findOne({ UserID: UserID }).select(
-      "-_id -__v -EmailVerified"
-    );
+    const userData = await User.find({ UserID: UserID })
+      .select("-_id -__v -EmailVerified")
+      .populate({
+        path: "Posts",
+        options: {
+          select: "-__v -EmailVerified -userId", // Exclude fields from the populated document
+          sort: { name: -1 },
+          strictPopulate: false,
+        },
+      });
     res.status(200).json({ success: true, userData: userData });
     if (!userData)
       res.status(404).json({ success: false, message: "User not found" });
   } catch (error) {
-    console.log(error);
     next(error);
   }
 };
@@ -296,20 +302,20 @@ export const editProfile = async (
     const { error } = validateProfile(req.body);
     if (error) res.status(400).json({ success: false, message: error.message });
 
-    let ImgUrl
-    if(image){
-      const link = await ImageUpload(image,next,UserID);
-      ImgUrl = link
+    let ImgUrl;
+    if (image) {
+      const link = await ImageUpload(image, next, UserID);
+      ImgUrl = link;
     }
     const user = await User.findByIdAndUpdate(
       UserID,
-      { Name: Name, Username: Username, Bio: Bio, ProfileUrl:ImgUrl },
+      { Name: Name, Username: Username, Bio: Bio, ProfileUrl: ImgUrl },
       { new: true, upsert: true }
     );
     if (!user)
       res.status(404).json({ success: false, message: "User not found" });
     user.save();
-    res.status(200).json({ success: true, message: "Profile Updated"});
+    res.status(200).json({ success: true, message: "Profile Updated" });
   } catch (error) {
     next(error);
   }
