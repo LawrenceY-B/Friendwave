@@ -8,4 +8,11 @@ export interface IPost {
   likes: Schema.Types.ObjectId[]; // Array of user IDs who liked the post
   comments: any[]; // Array of comment IDs
   dateTime: Date; // Date and time of the post in ISO format (e.g., "2023-11-10T12:34:56.789Z")
+  saved: boolean;
+
+}
+
+export interface ISavedPost {
+  userId: Schema.Types.ObjectId;
+  postId: Schema.Types.ObjectId;
 }

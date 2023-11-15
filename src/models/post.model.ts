@@ -8,7 +8,8 @@ const PostSchema = new Schema<IPost>({
     caption:{type:String},
     likes:[{type:Schema.Types.ObjectId, ref:"User"}],
     comments:[{type:Schema.Types.ObjectId, ref:"Comment"}],
-    dateTime:{type:Date}
+    dateTime:{type:Date},
+    // saved:{type:Boolean}
 });
 
 const Post = model<IPost>("Posts", PostSchema);
