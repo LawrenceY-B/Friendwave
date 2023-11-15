@@ -13,7 +13,7 @@ const UserSchema = new Schema<IUser>({
   Followers: [{ type: String, ref: "Followers", }],
   Followings: [{ type: String, ref: "Following",}],
   Posts: [{ type: Schema.Types.ObjectId, ref: "Posts",}],
-  SavedPosts: { type: Schema.Types.ObjectId, ref: "SavedPosts",},
+  SavedPosts: [{ type: Schema.Types.ObjectId, ref: "SavedPosts",}],
 });
 
 const User = model<IUser>("User", UserSchema);

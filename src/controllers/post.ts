@@ -1,12 +1,12 @@
 import Post from "../models/post.model";
 import { NextFunction, Request, Response } from "express";
-
 import {
   ImageUpload,
   validatePost,
   validatePostID,
 } from "../services/post.service";
 import User from "../models/user.model";
+import SavedPost from "../models/savedpost.model";
 
 export const newPost = async (
   req: Request,
@@ -16,6 +16,9 @@ export const newPost = async (
   try {
     const userId = req.user.userID;
     const { error } = validatePost(req.body);
+    if (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
     const { caption } = req.body;
 
     const images = req.files as Express.Multer.File[];
@@ -28,6 +31,7 @@ export const newPost = async (
       likes: [],
       comments: [],
       dateTime: Date.now(),
+      saved: false,
     });
 
     await post.save();
@@ -37,7 +41,6 @@ export const newPost = async (
       { $set: { postId: post._id } },
       { new: true }
     );
-    // console.log(updatedPost);
     const updateUser = await User.findById(userId);
     updateUser?.Posts.push(updatedPost?.postId);
     updateUser?.save();
@@ -96,9 +99,12 @@ export const addLikes = async (
 ) => {
   try {
     const userID = req.user.userID;
-    const { PostID } = req.body;
-
-    const isExisting = await Post.findOne({ postId: PostID });
+    const { error } = validatePostID(req.body);
+    if (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+    const { postID } = req.body;
+    const isExisting = await Post.findOne({ postId: postID });
     if (!isExisting) {
       res.status(404).json({ success: false, message: "Post not found" });
     }
@@ -125,9 +131,12 @@ export const unlike = async (
 ) => {
   try {
     const userID = req.user.userID;
-    const { PostID } = req.body;
-    const isExisting = await Post.findOne({ postId: PostID });
-    console.log(userID);
+    const { error } = validatePostID(req.body);
+    if (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+    const { postID } = req.body;
+    const isExisting = await Post.findOne({ postId: postID });
 
     if (!isExisting) {
       return res
@@ -140,13 +149,10 @@ export const unlike = async (
         message: "You have not liked this post",
       });
     }
-    console.log("isExisting.likes:", isExisting.likes);
-    console.log("userID:", userID);
+  
 
     const updatedLikes = isExisting.likes.filter((like) => like != userID);
-    console.log("updatedLikes:", updatedLikes);
 
-    console.log(updatedLikes);
 
     isExisting.likes = updatedLikes;
 
@@ -157,6 +163,94 @@ export const unlike = async (
     next(error);
   }
 };
+
+export const AddtoSaved = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userID = req.user.userID;
+    const { error } = validatePostID(req.body);
+    if (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+    const { postID } = req.body;
+
+    const isSaved = await SavedPost.findOne({ postId: postID, userId: userID });
+    if (!isSaved) {
+      const savedPost = new SavedPost({
+        postId: postID,
+        userId: userID,
+      });
+      await savedPost.save();
+
+
+      // const filter = { postId: postID, userId: userID };
+      // const update = { saved: true };
+
+      // const result = await Post.findByIdAndUpdate(
+      //   postID , { $set: { saved:true }}
+      // );
+
+
+      const user = await User.findOne({ UserID: userID });
+      if (user) {
+        user.SavedPosts.push(savedPost._id);
+        await user.save();
+      }
+
+      res
+        .status(200)
+        .json({ success: true, message: "Post saved successfully" });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const RemoveFromSaved = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userID = req.user.userID;
+    const { error } = validatePostID(req.body);
+    if (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+    const { postID } = req.body;
+    const filter = { postId: postID, userId: userID };
+    console.log(filter);
+
+    const removeSaved = await SavedPost.findOneAndDelete({
+      userId: userID,
+      postId: postID,
+    });
+    console.log(removeSaved);
+    if (!removeSaved) {
+      res.status(404).json({ success: false, message: "Post not found" });
+    }
+// const result = await Post.findByIdAndUpdate(
+//         postID , { $set: { saved:false }}
+//       );
+    const user = await User.findOne({ UserID: userID });
+    if (user) {
+      user.SavedPosts.filter(
+        (post: String) => post.toString() !== removeSaved?._id.toString()
+      );
+      await user.save();
+    }
+    return res.status(200).json({
+      status: true,
+      message: "Post removed from saved",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // if (user){
 //     const index = user.Posts.indexOf(postId);
 //     user.Posts.splice(index,1);
