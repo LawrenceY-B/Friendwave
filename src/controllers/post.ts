@@ -1,7 +1,11 @@
 import Post from "../models/post.model";
 import { NextFunction, Request, Response } from "express";
 
-import { ImageUpload, validatePost, validatePostID } from "../services/post.service";
+import {
+  ImageUpload,
+  validatePost,
+  validatePostID,
+} from "../services/post.service";
 import User from "../models/user.model";
 
 export const newPost = async (
@@ -52,9 +56,11 @@ export const deletePost = async (
 ) => {
   try {
     const userId = req.user.userID;
-    const {error} = validatePostID(req.body);
-    if (error) {res.status(400).json({success:false,message:error.message})}
-    const {postID} = req.body;
+    const { error } = validatePostID(req.body);
+    if (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
+    const { postID } = req.body;
     const post = await Post.findById(postID);
     if (!post)
       return res
@@ -69,10 +75,11 @@ export const deletePost = async (
       const user = await User.findById(userId);
 
       if (user) {
-        user.Posts = user.Posts.filter((postId) => postId.toString() !== deletedpostID.toString());
+        user.Posts = user.Posts.filter(
+          (postId) => postId.toString() !== deletedpostID.toString()
+        );
         await user.save();
       }
-     
     }
 
     return res
@@ -82,36 +89,76 @@ export const deletePost = async (
     next(error);
   }
 };
-export const addLikes= async(
+export const addLikes = async (
   req: Request,
-  res:Response,
+  res: Response,
   next: NextFunction
-)=>{
-try {
-  const userID = req.user.userID
-  const {PostID} =req.body
+) => {
+  try {
+    const userID = req.user.userID;
+    const { PostID } = req.body;
 
-  const isExisting = await Post.findOne({postId:PostID})
-  if (!isExisting) {
-    res.status(404).json({success: false, message:"Post not found"})
+    const isExisting = await Post.findOne({ postId: PostID });
+    if (!isExisting) {
+      res.status(404).json({ success: false, message: "Post not found" });
+    }
+    if (isExisting) {
+      if (isExisting.likes.includes(userID)) {
+        return res.status(400).json({
+          success: false,
+          message: "You have already liked this post",
+        });
+      }
+      isExisting?.likes.push(userID);
+      isExisting?.save();
+    }
+
+    res.status(200).json({ success: true, message: `Successfully added` });
+  } catch (error) {
+    next(error);
   }
-  if (isExisting) {
-    isExisting?.likes.push(userID)
-    isExisting?.save()
+};
+export const unlike = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userID = req.user.userID;
+    const { PostID } = req.body;
+    const isExisting = await Post.findOne({ postId: PostID });
+    console.log(userID);
+
+    if (!isExisting) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found" });
+    }
+    if (!isExisting.likes.includes(userID)) {
+      return res.status(400).json({
+        success: false,
+        message: "You have not liked this post",
+      });
+    }
+    console.log("isExisting.likes:", isExisting.likes);
+    console.log("userID:", userID);
+
+    const updatedLikes = isExisting.likes.filter((like) => like != userID);
+    console.log("updatedLikes:", updatedLikes);
+
+    console.log(updatedLikes);
+
+    isExisting.likes = updatedLikes;
+
+    await isExisting.save();
+
+    res.status(200).json({ success: true, message: `Successfully unliked` });
+  } catch (error) {
+    next(error);
   }
-
- 
-
- res.status(200).json({success:true, message:`Successfully added`})
-
-} catch (error) {
-  next(error)
-}
-
-
-}
- // if (user){
-      //     const index = user.Posts.indexOf(postId);
-      //     user.Posts.splice(index,1);
-      //     user.save();
-      // }
+};
+// if (user){
+//     const index = user.Posts.indexOf(postId);
+//     user.Posts.splice(index,1);
+//     user.save();
+// }
