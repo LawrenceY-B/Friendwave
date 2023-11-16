@@ -7,6 +7,7 @@ import {
 } from "../services/post.service";
 import User from "../models/user.model";
 import SavedPost from "../models/savedpost.model";
+import { Schema } from "mongoose";
 
 export const newPost = async (
   req: Request,
@@ -232,13 +233,10 @@ export const RemoveFromSaved = async (
     if (!removeSaved) {
       res.status(404).json({ success: false, message: "Post not found" });
     }
-// const result = await Post.findByIdAndUpdate(
-//         postID , { $set: { saved:false }}
-//       );
     const user = await User.findOne({ UserID: userID });
     if (user) {
-      user.SavedPosts.filter(
-        (post: String) => post.toString() !== removeSaved?._id.toString()
+      user.SavedPosts = user.SavedPosts.filter(
+        (post: any) => post.toString() !== removeSaved?._id.toString()
       );
       await user.save();
     }

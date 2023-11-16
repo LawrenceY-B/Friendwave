@@ -14,7 +14,7 @@ Followings: any[];
 Posts:any[];
 Likes: any;
 Comments: any;
-SavedPosts:any
+SavedPosts:any[]
 
 }
 export interface IFollowing{
