@@ -2,12 +2,15 @@ import Post from "../models/post.model";
 import { NextFunction, Request, Response } from "express";
 import {
   ImageUpload,
+  validateComment,
+  validateCommentID,
   validatePost,
   validatePostID,
 } from "../services/post.service";
 import User from "../models/user.model";
 import SavedPost from "../models/savedpost.model";
 import { Schema } from "mongoose";
+import Comment from "../models/comment.model";
 
 export const newPost = async (
   req: Request,
@@ -150,10 +153,8 @@ export const unlike = async (
         message: "You have not liked this post",
       });
     }
-  
 
     const updatedLikes = isExisting.likes.filter((like) => like != userID);
-
 
     isExisting.likes = updatedLikes;
 
@@ -186,14 +187,12 @@ export const AddtoSaved = async (
       });
       await savedPost.save();
 
-
       // const filter = { postId: postID, userId: userID };
       // const update = { saved: true };
 
       // const result = await Post.findByIdAndUpdate(
       //   postID , { $set: { saved:true }}
       // );
-
 
       const user = await User.findOne({ UserID: userID });
       if (user) {
@@ -248,6 +247,139 @@ export const RemoveFromSaved = async (
     next(error);
   }
 };
+// work on comments here 👇🏽👇🏽👇🏽👇🏽
+
+export const createComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = req.user.userID;
+    const { postID, message } = req.body;
+    const { error } = validateComment(req.body);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    const isExisting = await Post.findOne({ postId: postID });
+    if (!isExisting) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found" });
+    }
+
+    const newComment = new Comment({
+      userId: user,
+      postId: postID,
+      comment: message,
+      dateTime: Date.now(),
+    });
+    await newComment.save();
+
+    const updatedPost = await Post.findOneAndUpdate(
+      { postId: postID },
+      { $push: { comments: newComment._id } },
+      { new: true }
+    );
+    if (!updatedPost) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Something went wrong" });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Comment created successfully",
+      comment: newComment,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllComments = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { postID } = req.body;
+    const { error } = validatePostID(req.body);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    const isExisting = await Post.findOne({ postId: postID });
+    if (!isExisting) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Post not found" });
+    }
+    const comments = await Comment.find({ postId: postID })
+      .select("-postId")
+      .populate({
+        path: "userId",
+        options: {
+          select: "Username ProfileUrl ",
+          sort: { name: -1 },
+          strictPopulate: false,
+        },
+      })
+      .sort({ dateTime: -1 });
+
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Comments retrieved successfully",
+        comments: comments,
+      });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteComment = async (
+  req:Request, res: Response, next: NextFunction
+) => {
+  try {
+    const { error } = validateCommentID(req.body);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    const commentId = req.body
+
+    const comment = await Comment.findOneAndDelete({_id :commentId})
+    if(!comment){
+      return res.status(404).json({success:false, message:"Comment not found"})
+    }
+    res.status(200).json({success:true, message:"Comment deleted successfully"})
+    
+  } catch (error) {
+    next(error)
+  }
+}
+
+/*
+
+1. create a comment model  ✅  
+2. data to save in comment model ✅
+    - userId
+    - postId
+    - message
+    - replies
+    - dateTime
+3. A new comment should be added to the comment model ✅
+4. The comment id should be added to the post model ✅
+
+i. Get all coments under a particular post ✅
+
+I. Delete a comment
+
+
+a. Get all replies under a particular comment
+
+
+
+*/
 
 // if (user){
 //     const index = user.Posts.indexOf(postId);
