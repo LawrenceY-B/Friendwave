@@ -20,7 +20,7 @@ PostRoutes.post('/removesaved', verifyToken, RemoveFromSaved)
 
 
 //routes for comments
-PostRoutes.post('/comments',verifyToken, createComment)
+PostRoutes.post('/comment',verifyToken, createComment)
 PostRoutes.post('/allcomments',verifyToken, getAllComments)
 PostRoutes.delete('/removecomment',verifyToken, deleteComment)
 

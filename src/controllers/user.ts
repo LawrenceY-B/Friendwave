@@ -153,7 +153,7 @@ export const getFollowing = async (
       .populate({
         path: "followingID",
         options: {
-          select: "-EmailVerified", // Exclude fields from the populated document
+          select: "Username ProfileUrl UserID", // Exclude fields from the populated document
           sort: { name: -1 },
           strictPopulate: false,
         },
@@ -177,7 +177,7 @@ export const getFollowers = async (
       .populate({
         path: "followerID",
         options: {
-          select: "-EmailVerified", // Exclude fields from the populated document
+          select: "Username ProfileUrl UserID", // Exclude fields from the populated document
           sort: { name: -1 },
           strictPopulate: false,
         },
