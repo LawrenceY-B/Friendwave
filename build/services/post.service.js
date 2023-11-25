@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ImageUpload = exports.validatePostID = exports.validatePost = void 0;
+exports.ImageUpload = exports.validateComment = exports.validateCommentID = exports.validatePostID = exports.validatePost = void 0;
 const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_request_presigner_1 = require("@aws-sdk/s3-request-presigner");
 const joi_1 = __importDefault(require("joi"));
@@ -31,6 +31,21 @@ const validatePostID = (caption) => {
     return schema.validate(caption);
 };
 exports.validatePostID = validatePostID;
+const validateCommentID = (caption) => {
+    const schema = joi_1.default.object({
+        commentId: joi_1.default.string().min(6),
+    });
+    return schema.validate(caption);
+};
+exports.validateCommentID = validateCommentID;
+const validateComment = (caption) => {
+    const schema = joi_1.default.object({
+        message: joi_1.default.string().min(0).max(250),
+        postID: joi_1.default.string().min(6),
+    });
+    return schema.validate(caption);
+};
+exports.validateComment = validateComment;
 const ImageUpload = (images, next, userid) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const awsS3 = new client_s3_1.S3Client({

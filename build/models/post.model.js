@@ -8,7 +8,8 @@ const PostSchema = new mongoose_1.Schema({
     caption: { type: String },
     likes: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "User" }],
     comments: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Comment" }],
-    dateTime: { type: Date }
+    dateTime: { type: Date },
+    // saved:{type:Boolean}
 });
 const Post = (0, mongoose_1.model)("Posts", PostSchema);
 exports.default = Post;

@@ -15,4 +15,11 @@ PostRoutes.post('/newpost', PostUpload, isAuthorized_1.verifyToken, post_1.newPo
 PostRoutes.post('/deletepost', isAuthorized_1.verifyToken, post_1.deletePost);
 PostRoutes.post('/likepost', isAuthorized_1.verifyToken, post_1.addLikes);
 PostRoutes.post('/unlikepost', isAuthorized_1.verifyToken, post_1.unlike);
+// routes for saved post
+PostRoutes.post('/savepost', isAuthorized_1.verifyToken, post_1.AddtoSaved);
+PostRoutes.post('/removesaved', isAuthorized_1.verifyToken, post_1.RemoveFromSaved);
+//routes for comments
+PostRoutes.post('/comment', isAuthorized_1.verifyToken, post_1.createComment);
+PostRoutes.post('/allcomments', isAuthorized_1.verifyToken, post_1.getAllComments);
+PostRoutes.delete('/removecomment', isAuthorized_1.verifyToken, post_1.deleteComment);
 exports.default = PostRoutes;

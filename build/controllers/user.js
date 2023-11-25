@@ -135,7 +135,7 @@ const getFollowing = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
             .populate({
             path: "followingID",
             options: {
-                select: "-EmailVerified",
+                select: "Username ProfileUrl UserID",
                 sort: { name: -1 },
                 strictPopulate: false,
             },
@@ -156,7 +156,7 @@ const getFollowers = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
             .populate({
             path: "followerID",
             options: {
-                select: "-EmailVerified",
+                select: "Username ProfileUrl UserID",
                 sort: { name: -1 },
                 strictPopulate: false,
             },
