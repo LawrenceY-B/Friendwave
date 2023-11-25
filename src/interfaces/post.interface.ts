@@ -16,3 +16,18 @@ export interface ISavedPost {
   userId: Schema.Types.ObjectId;
   postId: Schema.Types.ObjectId;
 }
+
+export interface IComment {
+  commentId: Schema.Types.ObjectId;
+  userId: Schema.Types.ObjectId;
+  postId: Schema.Types.ObjectId;
+  replies: IReplies
+  comment: string;
+  dateTime: Date;
+}
+export interface IReplies{
+  userId: Schema.Types.ObjectId;
+  commentId: Schema.Types.ObjectId;
+  reply: string;
+  dateTime: Date;
+}
