@@ -22,7 +22,7 @@ Friend Wave is built using the following technologies:
 ### Installation
 
 1. Clone the repository:
-git clone https://github.com/yourusername/friend-wave.git
+git clone [https://github.com/LawrenceY-B/friend-wave.git](https://github.com/LawrenceY-B/Friendwave.git)
 
 2. Navigate to the project directory:
 cd friendwave
@@ -40,7 +40,9 @@ Access Friend Wave at `http://localhost:3000`.
 
 - Feature 1: Follow and Unfollow ✅
 - Feature 2: User Authentication (Auth0 and jwt) ✅
-- Feature 3: Add Posts (working on it🚀) 
+- Feature 3: Add Posts ✅
+- Feature 4: Comments ✅
+- Feature 5:Stories (working on it🚀) 
 
 
 ## Contact
