@@ -27,6 +27,14 @@ export const validatePostID = (caption: Request) => {
     });
     return schema.validate(caption);
   };
+
+export const validateReply = (caption: Request) => {
+  const schema = joi.object({
+    commentID: joi.string().min(6),
+    message: joi.string().min(0).max(250),
+  });
+  return schema.validate(caption);
+};
 export const validateComment = (caption: Request) => {
   const schema= joi .object({
     message:joi.string().min(0).max(250),

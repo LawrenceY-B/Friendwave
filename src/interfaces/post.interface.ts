@@ -21,7 +21,7 @@ export interface IComment {
   commentId: Schema.Types.ObjectId;
   userId: Schema.Types.ObjectId;
   postId: Schema.Types.ObjectId;
-  replies: IReplies
+  replies: IReplies[];
   comment: string;
   dateTime: Date;
 }
@@ -29,5 +29,5 @@ export interface IReplies{
   userId: Schema.Types.ObjectId;
   commentId: Schema.Types.ObjectId;
   reply: string;
-  dateTime: Date;
+  dateTime: any;
 }
