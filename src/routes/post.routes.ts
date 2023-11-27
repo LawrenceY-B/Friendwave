@@ -1,7 +1,7 @@
 import multer from "multer";
 import {Router} from "express";
 import { verifyToken } from "../middleware/isAuthorized";
-import { AddtoSaved, RemoveFromSaved, addLikes, createComment, deleteComment, deletePost, getAllComments, newPost, unlike } from "../controllers/post";
+import { AddtoSaved, RemoveFromSaved, addLikes, createComment, deleteComment, deletePost, getAllComments, newPost, replyComment, unlike } from "../controllers/post";
 
 const PostRoutes = Router();
 
@@ -23,6 +23,7 @@ PostRoutes.post('/removesaved', verifyToken, RemoveFromSaved)
 PostRoutes.post('/comment',verifyToken, createComment)
 PostRoutes.post('/allcomments',verifyToken, getAllComments)
 PostRoutes.delete('/removecomment',verifyToken, deleteComment)
+PostRoutes.post('/replycomment',verifyToken, replyComment)
 
 
 export default PostRoutes

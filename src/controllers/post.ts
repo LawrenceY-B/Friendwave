@@ -6,11 +6,13 @@ import {
   validateCommentID,
   validatePost,
   validatePostID,
+  validateReply,
 } from "../services/post.service";
 import User from "../models/user.model";
 import SavedPost from "../models/savedpost.model";
 import { Schema } from "mongoose";
 import Comment from "../models/comment.model";
+import { IReplies } from "../interfaces/post.interface";
 
 export const newPost = async (
   req: Request,
@@ -325,38 +327,87 @@ export const getAllComments = async (
       })
       .sort({ dateTime: -1 });
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Comments retrieved successfully",
-        comments: comments,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Comments retrieved successfully",
+      comments: comments,
+    });
   } catch (error) {
     next(error);
   }
 };
 
 export const deleteComment = async (
-  req:Request, res: Response, next: NextFunction
+  req: Request,
+  res: Response,
+  next: NextFunction
 ) => {
   try {
     const { error } = validateCommentID(req.body);
     if (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
-    const commentId = req.body
-
-    const comment = await Comment.findOneAndDelete({_id :commentId})
-    if(!comment){
-      return res.status(404).json({success:false, message:"Comment not found"})
+    const { commentId } = req.body;
+    const comment = await Comment.findOneAndDelete({ _id: commentId });
+    if (!comment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Comment not found" });
     }
-    res.status(200).json({success:true, message:"Comment deleted successfully"})
+    res
+      .status(200)
+      .json({ success: true, message: "Comment deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+export const replyComment = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { commentID, message } = req.body;
+    const { error } = validateReply(req.body);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    const user = req.user.userID;
+    const comment = await Comment.findById(commentID);
+    if (!comment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Comment not found" });
+    }
+    const newReply: IReplies = {
+      userId: user,
+      commentId: commentID,
+      reply: message,
+      dateTime: Date.now(),
+    };
+
+    comment.replies.push(newReply);
+    await comment.save();
+    res
+      .status(200)
+      .json({ success: true, message: "Reply added successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteReply = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = req.user.userID;
     
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 /*
 
