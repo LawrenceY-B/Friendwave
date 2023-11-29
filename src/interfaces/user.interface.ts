@@ -15,6 +15,7 @@ Posts:any[];
 Likes: any;
 Comments: any;
 SavedPosts:any[]
+Stories: any[];
 
 }
 export interface IFollowing{

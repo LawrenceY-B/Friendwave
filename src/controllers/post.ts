@@ -452,7 +452,9 @@ export const deleteReply = async (
 
 /*
 
-1. create IG story
+1. create IG story array
+2. add posts to user stories
+
 
 
 

@@ -4,7 +4,7 @@ import { IComment } from "../interfaces/post.interface";
 
 const CommentSchema = new Schema<IComment>({
 userId: { type: Schema.Types.ObjectId,ref:"User", required: true },
-postId: { type: Schema.Types.ObjectId, ref:"Post",  required:true},
+postId: { type: Schema.Types.ObjectId, ref:"Posts",  required:true},
 replies: [],
 comment: { type: String, required: true },
 dateTime: { type: Date, required: true},
