@@ -10,6 +10,7 @@ import {
 } from "../services/post.service";
 import User from "../models/user.model";
 import SavedPost from "../models/savedpost.model";
+import { v4 as uui4 } from "uuid";
 import { Schema } from "mongoose";
 import Comment from "../models/comment.model";
 import { IReplies } from "../interfaces/post.interface";
@@ -58,6 +59,19 @@ export const newPost = async (
     next(error);
   }
 };
+//test this 👇🏽👇🏽👇🏽👇🏽
+export const getPost = async(req:Request, res:Response, next:NextFunction)=>{
+try {
+  const postId = req.params.postId;
+  const post = await Post.findOne({postId:postId})
+  if(!post){
+    return res.status(404).json({success:false, message:"Post not found"})
+  }
+  res.status(200).json({success:true, message:"Post found", post})
+} catch (error) {
+  next(error);
+}
+}
 export const deletePost = async (
   req: Request,
   res: Response,
@@ -380,6 +394,7 @@ export const replyComment = async (
         .json({ success: false, message: "Comment not found" });
     }
     const newReply: IReplies = {
+      replyId: uui4(),
       userId: user,
       commentId: commentID,
       reply: message,
@@ -390,7 +405,7 @@ export const replyComment = async (
     await comment.save();
     res
       .status(200)
-      .json({ success: true, message: "Reply added successfully" });
+      .json({ success: true, message: "Reply added successfully", comment: comment});
   } catch (error) {
     next(error);
   }
@@ -403,7 +418,33 @@ export const deleteReply = async (
 ) => {
   try {
     const user = req.user.userID;
-    
+    const { commentID, replyID } = req.body;
+
+    const comment = await Comment.findById(commentID);
+    if (!comment) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Comment not found" });
+    }
+    const reply = comment.replies.find(
+      (reply: IReplies) => reply.replyId.toString() === replyID.toString()
+    );
+    if (!reply) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Reply not found" });
+    }
+    comment.replies = comment.replies.filter(
+      (reply: IReplies) => reply.replyId.toString() !== replyID.toString()
+    );
+    comment.save();
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Reply deleted successfully",
+        reply: comment.replies,
+      });
   } catch (error) {
     next(error);
   }
@@ -411,22 +452,7 @@ export const deleteReply = async (
 
 /*
 
-1. create a comment model  ✅  
-2. data to save in comment model ✅
-    - userId
-    - postId
-    - message
-    - replies
-    - dateTime
-3. A new comment should be added to the comment model ✅
-4. The comment id should be added to the post model ✅
-
-i. Get all coments under a particular post ✅
-
-I. Delete a comment
-
-
-a. Get all replies under a particular comment
+1. create IG story
 
 
 
