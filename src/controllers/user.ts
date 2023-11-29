@@ -320,3 +320,51 @@ export const editProfile = async (
     next(error);
   }
 };
+
+export const getotherUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userID } = req.query;
+    console.log(userID);
+    const userData = await User.find({ UserID: userID })
+      .select("-_id -__v -EmailVerified")
+      .populate({
+        path: "Posts",
+        options: {
+          select: "-__v -EmailVerified -userId", // Exclude fields from the populated document
+          sort: { name: -1 },
+          strictPopulate: false,
+        },
+      });
+    res.status(200).json({ success: true, userData: userData });
+    if (!userData)
+      res.status(404).json({ success: false, message: "User not found" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const searchUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { username } = req.body;
+    const text = new RegExp(username as string, "i");
+
+    const user = await User.find({
+      $or: [{ Username: text }, { Name: text }],
+    }).select(
+      "-_id -__v -EmailVerified -Posts -SavedPosts -Followers -Followings"
+    );
+    res.status(200).json({ success: true, message: "User found", user: user });
+    if (!user)
+      res.status(404).json({ success: false, message: "User not found" });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -26,6 +26,7 @@ export interface IComment {
   dateTime: Date;
 }
 export interface IReplies{
+  replyId: string;
   userId: Schema.Types.ObjectId;
   commentId: Schema.Types.ObjectId;
   reply: string;
