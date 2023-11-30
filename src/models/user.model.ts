@@ -14,7 +14,7 @@ const UserSchema = new Schema<IUser>({
   Followings: [{ type: String, ref: "Following",}],
   Posts: [{ type: Schema.Types.ObjectId, ref: "Posts",}],
   SavedPosts: [{ type: String, ref: "SavedPosts",}],
-  Stories: [{type: Schema.Types.ObjectId, ref: "Stories",  index: { expires: 60 } }],
+  Stories: [{type: Schema.Types.ObjectId, ref: "Stories",}],
 });
 
 const User = model<IUser>("User", UserSchema);
