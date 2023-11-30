@@ -105,5 +105,27 @@ export const deleteStory = async (
         }
       }
     }
-  } catch (error) {}
+  } catch (error) {
+    next(error)
+  }
 };
+export const getStory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const user = req.user.userID;
+        const story = await Stories.find({userId: user}).populate({
+            path: "postId",
+            populate: {
+                path: "userId",
+                select: "Username ProfileUrl postId"
+            }
+        })
+        console.log(story);
+        if (!story || story.length === 0) {
+            return res.status(404).json({success: false, message: "Story not found"})
+        }
+        res.status(200).json({success: true, message: "Story found", data: story})
+        
+    } catch (error) {
+       next(error) 
+    }
+}
