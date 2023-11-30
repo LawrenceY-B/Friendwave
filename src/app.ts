@@ -8,6 +8,7 @@ import Authroutes from "./routes/auth.routes";
 import UserRoutes from "./routes/user.routes";
 import PostRoutes from "./routes/post.routes";
 import StoryRoutes from "./routes/story.routes";
+import { storycheck } from "./jobs/story.jobs";
 
 const app = express();
 const config = {
@@ -49,6 +50,7 @@ app.get("/", async (req: Request, res: Response, next: NextFunction) => {
 app.all("*", (req: Request, res: Response) => {
   res.status(404).json({ message: "Page Not Found 😔" });
 });
+storycheck();
 app.use(ErrorHandler);
 
 const server: Server = app.listen(environment.PORT, async () => {
