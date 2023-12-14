@@ -328,7 +328,6 @@ export const getotherUser = async (
 ) => {
   try {
     const { userID } = req.query;
-    console.log(userID);
     const userData = await User.find({ UserID: userID })
       .select("-_id -__v -EmailVerified")
       .populate({

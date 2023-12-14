@@ -4,6 +4,7 @@ import User from "../models/user.model";
 import { v4 as uiv4 } from "uuid";
 import { NextFunction, Request, Response } from "express";
 import { validateStory } from "../services/story.service";
+import Logger from "../lib/logger";
 
 export const addtoStory = async (
   req: Request,
@@ -119,7 +120,7 @@ export const getStory = async (req: Request, res: Response, next: NextFunction) 
                 select: "Username ProfileUrl postId"
             }
         })
-        console.log(story);
+        Logger.info(story);
         if (!story || story.length === 0) {
             return res.status(404).json({success: false, message: "Story not found"})
         }
