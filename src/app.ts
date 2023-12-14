@@ -12,6 +12,7 @@ import { storycheck, logcheck } from "./jobs/story.jobs";
 import Logger from "./lib/logger";
 import morganMiddleware from "./middleware/debughandler";
 import ChatRoutes from "./routes/chat.routes";
+import MessageRoutes from "./routes/message.routes";
 
 const app = express();
 const config = {
@@ -39,7 +40,8 @@ app
   .use("/api/users", UserRoutes)
   .use("/api/posts", PostRoutes)
   .use("/api/story", StoryRoutes)
-  .use("/api/chat", ChatRoutes);
+  .use("/api/chat", ChatRoutes)
+  .use("/api/messages",MessageRoutes)
 
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 
