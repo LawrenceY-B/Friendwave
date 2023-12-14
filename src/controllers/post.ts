@@ -14,6 +14,7 @@ import { v4 as uui4 } from "uuid";
 import { Schema } from "mongoose";
 import Comment from "../models/comment.model";
 import { IReplies } from "../interfaces/post.interface";
+import Logger from "../lib/logger";
 
 export const newPost = async (
   req: Request,
@@ -238,13 +239,13 @@ export const RemoveFromSaved = async (
     }
     const { postID } = req.body;
     const filter = { postId: postID, userId: userID };
-    console.log(filter);
+    Logger.info(filter);
 
     const removeSaved = await SavedPost.findOneAndDelete({
       userId: userID,
       postId: postID,
     });
-    console.log(removeSaved);
+    Logger.info(removeSaved);
     if (!removeSaved) {
       res.status(404).json({ success: false, message: "Post not found" });
     }

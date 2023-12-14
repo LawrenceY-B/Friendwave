@@ -1,15 +1,16 @@
 import mongoose from "mongoose";
 import { environment } from "../environments/endpoints.config";
+import Logger from "../lib/logger";
 
 
 export const DB_Connection = async () => {
     mongoose
     .connect(`${environment.DBUrl}`, {})
     .then(() => {
-      console.log("MongoDB connected!!");
+      Logger.info("MongoDB connected!!");
     })
     .catch((err: Error) => {
-      console.log("Failed to connect to MongoDB", err);
+      Logger.error("Failed to connect to MongoDB", err);
     });
 };
 

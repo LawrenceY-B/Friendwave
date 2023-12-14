@@ -8,7 +8,10 @@ import Authroutes from "./routes/auth.routes";
 import UserRoutes from "./routes/user.routes";
 import PostRoutes from "./routes/post.routes";
 import StoryRoutes from "./routes/story.routes";
-import { storycheck } from "./jobs/story.jobs";
+import { storycheck, logcheck } from "./jobs/story.jobs";
+import Logger from "./lib/logger";
+import morganMiddleware from "./middleware/debughandler";
+import ChatRoutes from "./routes/chat.routes";
 
 const app = express();
 const config = {
@@ -35,7 +38,8 @@ app
   .use("/api", Authroutes)
   .use("/api/users", UserRoutes)
   .use("/api/posts", PostRoutes)
-  .use("/api/story", StoryRoutes);
+  .use("/api/story", StoryRoutes)
+  .use("/api/chat", ChatRoutes);
 
 // auth router attaches /login, /logout, and /callback routes to the baseURL
 
@@ -47,13 +51,17 @@ app.get("/", async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+
 app.all("*", (req: Request, res: Response) => {
   res.status(404).json({ message: "Page Not Found 😔" });
 });
+
 storycheck();
+logcheck();
+app.use(morganMiddleware)
 app.use(ErrorHandler);
 
 const server: Server = app.listen(environment.PORT, async () => {
   await DB_Connection();
-  console.log(`🚀🚀🚀Server is running on port ${process.env.PORT}`);
+  Logger.debug(`🚀🚀🚀Server is running on port ${process.env.PORT}`);
 });
