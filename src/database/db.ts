@@ -7,7 +7,7 @@ export const DB_Connection = async () => {
     mongoose
     .connect(`${environment.DBUrl}`, {})
     .then(() => {
-      Logger.info("MongoDB connected!!");
+      Logger.debug("MongoDB connected!!");
     })
     .catch((err: Error) => {
       Logger.error("Failed to connect to MongoDB", err);

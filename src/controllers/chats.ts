@@ -15,17 +15,18 @@ export const newChat = async (
       return res
         .status(400)
         .json({ success: false, message: error.details[0].message });
-    const { senderID, receiverID } = req.body;
+     const userID = req.user.userID  
+    const {receiverID } = req.body;
 
     const isExisting = await Chat.findOne({
-      members: { $all: [senderID, receiverID] },
+      members: { $all: [userID, receiverID] },
     });
     if (isExisting) {
       return res
         .status(400)
         .json({ success: false, message: "Chat already exists" });
     }
-    let members = [senderID, receiverID];
+    let members = [userID, receiverID];
     const chat = new Chat({ members });
     const savechat = await chat.save();
     if (!savechat) {
@@ -42,5 +43,43 @@ export const newChat = async (
 };
 
 //get chat
+export const getAllChats = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const senderID = req.user.userID;
+    const chat = await Chat.find({
+      members: { $in: [senderID] },
+    });
+    if (!chat) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Chat does not exist" });
+    }
+    res.status(200).json({ success: true, message: "Chat found", chat });
+  } catch (error) {
+    next(error);
+  }
+};
 
 //delete chat
+export const deleteChat = async (
+    req: Request,
+    res:Response,
+    next: NextFunction
+) => {
+    try {
+        const chatID = req.params.id;        
+        const chat = await Chat.findByIdAndDelete(chatID);
+        if (!chat) {
+            return res
+                .status(400)
+                .json({ success: false, message: "Chat does not exist" });
+        }
+        res.status(200).json({ success: true, message: "Chat deleted" });
+    } catch (error) {
+        next(error);
+    }
+}
