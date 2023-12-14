@@ -12,7 +12,6 @@ export const newMessage = (req: Request, res: Response, next: NextFunction) => {
       message,
       senderId,
       chatId,
-
     };
 
     const sendMessage = new Message({ ...newMessage, dateTime: Date.now()
@@ -51,8 +50,31 @@ export const deleteMessage = async (
     next:NextFunction
 ) => {
     try {
-        
+        const {messageId} = req.params;
+        const deleteMessage = await Message.findByIdAndDelete(messageId);
+        if(!deleteMessage){
+            res.status(400).json({success:"false", message: "Message not found" });
+        }
+        res.status(200).json({success:"true", message: "Message deleted" });
     } catch (error) {
-        
+       next(error); 
+    }
+}
+
+export const editMessage = async (
+    req:Request,
+    res:Response,
+    next:NextFunction
+) => {
+    try {
+        const {messageId} = req.params;
+        const {message} = req.body;
+        const editMessage = await Message.findByIdAndUpdate(messageId, {message: message});
+        if(!editMessage){
+            res.status(400).json({success:"false", message: "Message not found" });
+        }
+        res.status(200).json({success:"true", message: "Message edited" });
+    } catch (error) {
+        next(error);
     }
 }
