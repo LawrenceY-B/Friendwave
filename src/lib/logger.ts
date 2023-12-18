@@ -60,9 +60,6 @@ const transports = [
     filename: 'logs/error.log',
     level: 'error',
   }),
-  // Allow to print all the error message inside the all.log file
-  // (also the error log that are also printed inside the error.log(
-  new winston.transports.File({ filename: 'logs/all.log' }),
 ]
 
 // Create the logger instance that has to be exported 
