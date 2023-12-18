@@ -8,7 +8,6 @@ export default class SocketManager {
   constructor(io: SocketIOServer) {
     this.io = io;
     this.setupSocketEvents();
-    console.log("Socket Manager Initialized");
   }
 
   private setupSocketEvents(): void {
@@ -31,14 +30,12 @@ export default class SocketManager {
       const {userId} = userID;
       Logger.info(`Received addUser event for userID: ${userId}`);
       const isExisting = this.onlineUsers.has(userId);
-      console.log(`User ${userId} exists: ${isExisting}`);
       
       if (!isExisting) {
-        this.onlineUsers.set(userId, socket.id);
-        console.log(`Added user ${userId} to onlineUsers map`);
+        this.onlineUsers.set(userId, socket.id);;
       }
       
-      console.log(this.onlineUsers);
+     Logger.debug(this.onlineUsers);
     });
   }
   
@@ -49,16 +46,18 @@ export default class SocketManager {
   ): void {
     const { userId, message } = data;
     const targetSocketId = this.onlineUsers.get(userId) as string;
-    console.log(this.onlineUsers.get(userId))
+    Logger.info(
+      `Received privateMessage event from ${socket.id} to ${targetSocketId}`
+    );
     socket.to(targetSocketId).emit("privateMessage", {
       senderSocketId: socket.id,
       message: message,
     });
 
-    socket.emit("privateMessage", {
-      receiverSocketId: targetSocketId,
-      message: message,
-    });
+    // socket.emit("privateMessage", {
+    //   receiverSocketId: targetSocketId,
+    //   message: message,
+    // });
   }
   handleUserDisconnection(socket: Socket): void {
     Logger.info(`User disconnected: ${socket.id}`);
@@ -67,10 +66,6 @@ export default class SocketManager {
         this.onlineUsers.delete(key);
       }
     })
-    console.log(this.onlineUsers)
   }
 
-  getIo(): SocketIOServer {
-    return this.io;
-  }
 }

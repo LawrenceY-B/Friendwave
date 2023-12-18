@@ -37,8 +37,8 @@ export const storycheck = async () => {
 
 export const logcheck = () => {
   try {
-    const filePath = path.join(__dirname, "../../logs/all.log");
-    let task = cron.schedule("*/20 * * * *", async () => {
+    const filePath = path.join(__dirname, "../../logs/error.log");
+    let task = cron.schedule("* */24 * * *", async () => {
       Logger.info("task started");
      fs.access(filePath, fs.constants.F_OK, (err) => {
         if (err) {
