@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "name": "friendwave-backend",
+  "builds": [
+    {
+      "src": "/build/app.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/build/app.js"
+    }
+  ]
+}
