@@ -64,7 +64,7 @@ returns the same result, so a double-click can't break anything.
 |---|---|
 | `GET /api/chats` | `[{ id, participants, lastMessage, updatedAt }]`, most recent first |
 | `POST /api/chats` | `{ userId }` → the existing chat (200) or a new one (201) |
-| `DELETE /api/chats/:id` | deletes it and its messages |
+| `GET` / `DELETE /api/chats/:id` | one chat / delete it and its messages |
 | `GET` / `POST /api/chats/:id/messages` | history (newest first) / send `{ text }` |
 | `PATCH` / `DELETE /api/messages/:id` | edit `{ text }` / delete; your own messages only |
 

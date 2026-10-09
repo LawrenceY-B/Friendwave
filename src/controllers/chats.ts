@@ -31,6 +31,14 @@ export const getChats = async (req: Request, res: Response) => {
   send(res, await buildChats(chats, me));
 };
 
+// GET /chats/:id. Members only.
+export const getChat = async (req: Request, res: Response) => {
+  const me = req.user.userID;
+  const chat = await findChatForMember(String(req.params.id), me);
+  const [result] = await buildChats([chat], me);
+  send(res, result);
+};
+
 // POST /chats  { userId }. Returns the existing chat with that person, or creates one.
 export const createChat = async (req: Request, res: Response) => {
   const me = req.user.userID;

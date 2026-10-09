@@ -296,7 +296,15 @@ describe("chats and realtime messages", () => {
     assert.equal(chats[0].lastMessage.text, "hey alice");
   });
 
+  it("returns a single chat to its members only", async () => {
+    const chat = await bob.get(`/api/chats/${chatId}`);
+    assert.equal(chat.status, 200);
+    assert.equal(chat.body.data.participants[0].username, "Alice");
+    assert.equal(chat.body.data.lastMessage.text, "hey alice");
+  });
+
   it("keeps strangers out", async () => {
+    assert.equal((await carol.get(`/api/chats/${chatId}`)).status, 404);
     assert.equal((await carol.get(`/api/chats/${chatId}/messages`)).status, 404);
     assert.equal((await carol.post(`/api/chats/${chatId}/messages`, { text: "x" })).status, 404);
     assert.equal((await carol.del(`/api/chats/${chatId}`)).status, 404);

@@ -287,6 +287,7 @@ export const openapi = {
       }),
     },
     "/api/chats/{id}": {
+      get: op("Chats", "A chat (members only)", { 200: ok(ref("Chat")) }, { parameters: [id()] }),
       delete: op("Chats", "Delete a chat and its messages", { 200: ok({ type: "null" }) }, { parameters: [id()] }),
     },
     "/api/chats/{id}/messages": {
