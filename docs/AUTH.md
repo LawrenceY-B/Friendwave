@@ -112,3 +112,25 @@ Tests don't need Auth0 at all: start a tiny fake issuer that serves `/.well-know
 `/userinfo`, sign tokens with its key (`jose`'s `SignJWT`), and point `ISSUERBASEURL` at it.
 That's how this setup was verified: wrong audience, wrong issuer, unknown key, expired and HS256 tokens
 are rejected, and simultaneous first requests create exactly one user.
+
+## Account linking (one person, several logins)
+
+Each login method (Google, Apple, email + password) is a separate Auth0 user with its own `sub`,
+so it gets its own Friendwave account. To give a person one account:
+
+1. **Link the identities in Auth0.** Choose the primary (the one whose Friendwave account has the data)
+   and attach the others with the Management API:
+   `POST https://<tenant>/api/v2/users/{primary_sub}/identities` with `{ "provider": "apple", "user_id": "…" }`.
+   This needs a Machine-to-Machine application authorized for the *Auth0 Management API*
+   (`read:users`, `update:users`). After linking, every login method returns the primary `sub`.
+2. **Merge the Friendwave accounts.** The secondary accounts are now orphaned, so merge them:
+   ```bash
+   node scripts/merge-users.mjs <primaryUserId> <secondaryUserId> [...]          # dry run
+   node scripts/merge-users.mjs <primaryUserId> <secondaryUserId> [...] --apply  # for real
+   ```
+   It moves posts, comments, replies, likes, saves, stories, follows, chats and messages to the primary.
+   It drops what would become a self-follow, a chat with yourself, or a duplicate. It runs in a transaction
+   and writes a backup to `backups/` (gitignored, since it contains user data).
+
+If you link automatically by email (a post-login Action), only link when **both** emails are verified.
+Otherwise someone could sign up with your address and take over your account.
