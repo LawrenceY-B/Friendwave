@@ -30,11 +30,23 @@ cd friendwave
 3. Install dependencies:
 npm install
 
-4. Start the development server:
+4. Create your environment file and fill in the values:
+cp .env.example .env
+
+5. Start the development server (reloads on changes):
 npm run dev
 
 
 Access Friend Wave at `http://localhost:3000`.
+
+### Production build
+
+```
+npm run build   # compiles TypeScript to ./build
+npm start       # runs ./build/app.js
+```
+
+See [docs/CHANGES.md](docs/CHANGES.md) for the October 2026 upgrade notes, client-facing API changes and deployment notes (Render).
 
 ## Work Done
 
