@@ -14,6 +14,11 @@ const ErrorHandler = (err: any, req: Request, res: Response, next: NextFunction)
     if (err instanceof mongoose.Error.CastError || err instanceof mongoose.Error.ValidationError) status = 400;
     if (err instanceof multer.MulterError) status = 400;
     if (err.type === "entity.parse.failed") status = 400; // malformed JSON body
+    // Unique index violation, e.g. two people claiming the same username at the same moment
+    if (err.code === 11000) {
+        status = 409;
+        err.message = `${Object.keys(err.keyPattern ?? {}).join(", ") || "Value"} already taken`;
+    }
 
     if (status >= 500) Logger.error(err);
     const message = status >= 500 && !environment.isDevelopment ? "Something went wrong" : err.message;

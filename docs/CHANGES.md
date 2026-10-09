@@ -263,7 +263,15 @@ automatically on their first request. See [AUTH.md](AUTH.md) for how it works an
 
 Lesson: don't build your own token system on top of an identity provider unless you need to.
 
-## 18. Smaller things
+## 18. Enforce uniqueness in the database, not just in code
+
+Checking "is this username free?" and then inserting leaves a gap: two signups at the same moment
+can both pass the check. A **unique index** makes MongoDB itself refuse the second one. The code
+catches that error (`E11000`) and retries with another name. The index uses a case-insensitive
+*collation*, so `Lawrence` and `lawrence` count as the same. The same idea protects `Auth0ID`
+(one account per Auth0 user).
+
+## 19. Smaller things
 
 - Unknown errors now return 400 instead of 500 when they're the client's fault (bad id, bad JSON,
   upload too large). Internal error messages are hidden outside development, and the logger now

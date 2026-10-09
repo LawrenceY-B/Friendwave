@@ -21,6 +21,11 @@ const UserSchema = new Schema<IUser>({
   Stories: [{type: Schema.Types.ObjectId, ref: "Stories",}],
 }, { toJSON: { getters: true, virtuals: false } });
 
+// Usernames are unique ignoring case ("Lawrence" and "lawrence" clash).
+// Queries that should match the same way must pass this collation too.
+export const USERNAME_COLLATION = { locale: "en", strength: 2 };
+UserSchema.index({ Username: 1 }, { unique: true, collation: USERNAME_COLLATION });
+
 const User = model<IUser>("User", UserSchema);
 
 export default User

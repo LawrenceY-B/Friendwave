@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import User from "../models/user.model";
+import User, { USERNAME_COLLATION } from "../models/user.model";
 import Following from "../models/following.model";
 import {
   validateBio,
@@ -243,6 +243,15 @@ export const editProfile = async (
     const { Name, Username, Bio } = req.body;
     const image = req.file;
     const UserID = req.user.userID;
+
+    // Check before uploading anything. Excluding yourself lets you change
+    // the capitalisation of your own username.
+    if (Username !== undefined) {
+      const taken = await User.exists({ Username, _id: { $ne: UserID } }).collation(USERNAME_COLLATION);
+      if (taken) {
+        return res.status(409).json({ success: false, message: "Username already taken" });
+      }
+    }
 
     // Only change the fields that were actually sent
     const update: Record<string, string> = {};

@@ -15,7 +15,10 @@ Frontend ──"Authorization: Bearer <token>"──▶ Friendwave API
   issuer (your tenant), audience (this API) and expiry. Then it sets `req.user = { userID, Auth0id, userMail }`.
 - **New users:** if no Friendwave user has that Auth0 id yet, the API calls Auth0's `/userinfo`
   for their name, email and picture and creates the account (`services/auth.service.ts`). There's no
-  separate "register" step. Apple users who hide their name/email get a `user_xxxxxx` username.
+  separate "register" step. The username comes from their Auth0 nickname (or email); if it's taken,
+  a number is added (`lawrence` → `lawrence4821`). Apple users who hide their name/email start from `user`.
+- **Usernames are unique, ignoring case**: a unique index with a case-insensitive collation on
+  `Username`. Renaming to a taken username returns **409**.
 - **Sockets** use the same token: `io(API_URL, { auth: { token } })`.
 - **Logout** happens in the frontend (Auth0 SDK `logout()`). Access tokens are short-lived (24h by
   default; set "Token Expiration" on the API in Auth0).
