@@ -1,321 +1,154 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import User, { USERNAME_COLLATION } from "../models/user.model";
 import Following from "../models/following.model";
-import {
-  validateBio,
-  validateFollow,
-  validateProfile,
-  validateRemoveFollower,
-  validateSearch,
-  validateUserID,
-} from "../services/user.service";
-import Follower from "../models/follower.model";
-import { deleteImages, uploadImage } from "../lib/s3";
+import Post from "../models/post.model";
+import SavedPost from "../models/savedpost.model";
+import { storage } from "../lib/s3";
 import { escapeRegex } from "../lib/validation";
+import { toProfile, toUserSummary, USER_SUMMARY_FIELDS } from "../lib/dto";
+import { badRequest, conflict, notFound, pageFrom, paginate, send, sendPage } from "../lib/http";
+import { buildPosts, POST_AUTHOR } from "../services/post.service";
 import Logger from "../lib/logger";
 
-// Fields of another user that are safe to show publicly
-const PUBLIC_USER_FIELDS = "Username ProfileUrl UserID";
-
-export const newFollow = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { error } = validateFollow(req.body);
-    if (error) {
-      return res
-        .status(400)
-        .json({ success: false, message: error.details[0].message });
-    }
-    const { FollowingID } = req.body;
-    const UserID = req.user.userID;
-    if (UserID === FollowingID) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Can't follow self" });
-    }
-    if (!(await User.exists({ _id: FollowingID }))) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-
-    const existingfollow = await Following.findOne({
-      userID: UserID,
-      followingID: FollowingID,
-    });
-    if (existingfollow) {
-      return res
-        .status(400)
-        .json({ success: false, message: "User has already been added" });
-    }
-
-    await Following.create({ userID: UserID, followingID: FollowingID });
-    await Follower.create({ userID: FollowingID, followerID: UserID });
-    // $addToSet only adds the id if it isn't already in the array
-    await User.updateOne({ _id: UserID }, { $addToSet: { Followings: FollowingID } });
-    await User.updateOne({ _id: FollowingID }, { $addToSet: { Followers: UserID } });
-
-    res.status(200).json({ success: true, message: "Following" });
-  } catch (error) {
-    next(error);
-  }
+// Counts come straight from the collections, so they can never drift out of sync
+const loadProfile = async (userId: string, viewerId: string) => {
+  const user = await User.findById(userId).lean();
+  if (!user) throw notFound("User");
+  const isMe = userId === viewerId;
+  const [followerCount, followingCount, postCount, follows] = await Promise.all([
+    Following.countDocuments({ followingID: userId }),
+    Following.countDocuments({ userID: userId }),
+    Post.countDocuments({ userId }),
+    isMe ? null : Following.exists({ userID: viewerId, followingID: userId }),
+  ]);
+  return toProfile(user, { followerCount, followingCount, postCount, isMe, isFollowing: !!follows });
 };
 
-export const unFollow = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { error } = validateFollow(req.body);
-    if (error) {
-      return res
-        .status(400)
-        .json({ success: false, message: error.details[0].message });
-    }
-    const { FollowingID } = req.body;
-    const UserID = req.user.userID;
-
-    const following = await Following.findOneAndDelete({
-      userID: UserID,
-      followingID: FollowingID,
-    });
-    if (!following) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not in following list." });
-    }
-
-    await Follower.deleteOne({ userID: FollowingID, followerID: UserID });
-    await User.updateOne({ _id: UserID }, { $pull: { Followings: FollowingID } });
-    await User.updateOne({ _id: FollowingID }, { $pull: { Followers: UserID } });
-
-    res.status(200).json({ success: true, message: "Not Following" });
-  } catch (error) {
-    next(error);
-  }
+const ensureUserExists = async (userId: string) => {
+  if (!(await User.exists({ _id: userId }))) throw notFound("User");
 };
 
-export const getFollowing = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const following = await Following.find({
-      userID: req.user.userID,
-    })
-      .populate({ path: "followingID", select: PUBLIC_USER_FIELDS })
-      .select("-_id -__v");
-    res.status(200).json({ success: true, following: following });
-  } catch (err: any) {
-    next(err);
-  }
+// GET /users/me
+export const getMe = async (req: Request, res: Response) => {
+  send(res, await loadProfile(req.user.userID, req.user.userID));
 };
 
-export const getFollowers = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const followers = await Follower.find({
-      userID: req.user.userID,
-    })
-      .populate({ path: "followerID", select: PUBLIC_USER_FIELDS })
-      .select("-_id -__v");
-    res.status(200).json({ success: true, followers: followers });
-  } catch (err: any) {
-    next(err);
+// PATCH /users/me  (multipart: name, username, bio, avatar)
+export const updateMe = async (req: Request, res: Response) => {
+  const me = req.user.userID;
+  const { name, username, bio } = req.body;
+  if (username !== undefined) {
+    // Excluding yourself lets you change the capitalisation of your own username
+    const taken = await User.exists({ Username: username, _id: { $ne: me } }).collation(USERNAME_COLLATION);
+    if (taken) throw conflict("Username already taken");
   }
-};
-export const removeFollow = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { error } = validateRemoveFollower(req.body);
-    if (error) {
-      return res
-        .status(400)
-        .json({ success: false, message: error.details[0].message });
-    }
-    const { FollowerID } = req.body;
-    const UserID = req.user.userID;
-    const follower = await Follower.findOneAndDelete({
-      userID: UserID,
-      followerID: FollowerID,
-    });
-    if (!follower) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not in followers list." });
-    }
 
-    await Following.deleteOne({ followingID: UserID, userID: FollowerID });
-    await User.updateOne({ _id: UserID }, { $pull: { Followers: FollowerID } });
-    await User.updateOne({ _id: FollowerID }, { $pull: { Followings: UserID } });
+  // Only change the fields that were actually sent
+  const update: Record<string, string> = {};
+  if (name !== undefined) update.Name = name;
+  if (username !== undefined) update.Username = username;
+  if (bio !== undefined) update.Bio = bio;
+  if (req.file) update.ProfileUrl = await storage.uploadImage(req.file, "profile", me);
 
-    res.status(200).json({ success: true, message: "Removed." });
-  } catch (error) {
-    next(error);
+  // Returns the document as it was BEFORE the update
+  const before = await User.findByIdAndUpdate(me, update).lean();
+  if (!before) throw notFound("User");
+  if (req.file && before.ProfileUrl) {
+    // Remove the old picture from S3 (skipped automatically for Auth0 URLs)
+    storage.deleteImages([before.ProfileUrl]).catch((err) => Logger.error(err));
   }
+  send(res, await loadProfile(me, me));
 };
 
-export const AddBio = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const UserID = req.user.userID;
-    const { error } = validateBio(req.body);
-    if (error) {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-    const { Bio } = req.body;
-    // No `upsert`: that would create a half-empty user if the id didn't exist.
-    // findByIdAndUpdate already saves, so no extra save() is needed.
-    const user = await User.findByIdAndUpdate(UserID, { Bio: Bio });
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found." });
-    }
-    res.status(200).json({ success: true, message: "Bio Updated" });
-  } catch (error) {
-    next(error);
-  }
+// GET /users?search=
+export const searchUsers = async (req: Request, res: Response) => {
+  // Escape the input so characters like ".*(" are matched literally
+  const text = new RegExp(escapeRegex(String(req.query.search)), "i");
+  const { items, nextCursor } = await paginate(
+    (filter) => User.find(filter).select(USER_SUMMARY_FIELDS).lean(),
+    { $or: [{ Username: text }, { Name: text }] },
+    pageFrom(req)
+  );
+  sendPage(res, items.map(toUserSummary), nextCursor);
 };
 
-export const deleteBio = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const UserID = req.user.userID;
-    const user = await User.findByIdAndUpdate(UserID, { Bio: "" });
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found." });
-    }
-    res.status(200).json({ success: true, message: "Bio Deleted" });
-  } catch (error) {
-    next(error);
-  }
+// GET /users/:id
+export const getUser = async (req: Request, res: Response) => {
+  send(res, await loadProfile(String(req.params.id), req.user.userID));
 };
 
-// Your own profile includes your email; someone else's doesn't
-const findProfile = (userID: string, isOwnProfile: boolean) =>
-  User.find({ UserID: userID })
-    .select(isOwnProfile ? "-_id -__v -EmailVerified" : "-_id -__v -EmailVerified -Email -Auth0ID")
-    .populate({ path: "Posts", select: "-__v -userId" });
-
-export const getUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const userData = await findProfile(req.user.userID, true);
-    // Check BEFORE responding: you can only send one response per request
-    if (userData.length === 0) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-    res.status(200).json({ success: true, userData: userData });
-  } catch (error) {
-    next(error);
-  }
+// GET /users/:id/posts
+export const getUserPosts = async (req: Request, res: Response) => {
+  const userId = String(req.params.id);
+  await ensureUserExists(userId);
+  const { items, nextCursor } = await paginate(
+    (filter) => Post.find(filter).populate(POST_AUTHOR).lean(),
+    { userId },
+    pageFrom(req)
+  );
+  sendPage(res, await buildPosts(items, req.user.userID), nextCursor);
 };
 
-export const editProfile = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { error } = validateProfile(req.body);
-    if (error) {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-    const { Name, Username, Bio } = req.body;
-    const image = req.file;
-    const UserID = req.user.userID;
-
-    // Check before uploading anything. Excluding yourself lets you change
-    // the capitalisation of your own username.
-    if (Username !== undefined) {
-      const taken = await User.exists({ Username, _id: { $ne: UserID } }).collation(USERNAME_COLLATION);
-      if (taken) {
-        return res.status(409).json({ success: false, message: "Username already taken" });
-      }
-    }
-
-    // Only change the fields that were actually sent
-    const update: Record<string, string> = {};
-    if (Name !== undefined) update.Name = Name;
-    if (Username !== undefined) update.Username = Username;
-    if (Bio !== undefined) update.Bio = Bio;
-    if (image) update.ProfileUrl = await uploadImage(image, "profile", UserID);
-
-    // Returns the document as it was BEFORE the update
-    const before = await User.findByIdAndUpdate(UserID, update);
-    if (!before) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-    if (image) {
-      // Remove the old picture from S3 (skipped automatically for Auth0 URLs)
-      const oldPicture = before.get("ProfileUrl", null, { getters: false });
-      deleteImages([oldPicture]).catch((err) => Logger.error(err));
-    }
-    res.status(200).json({ success: true, message: "Profile Updated" });
-  } catch (error) {
-    next(error);
-  }
+// GET /users/:id/followers
+export const getFollowers = async (req: Request, res: Response) => {
+  const userId = String(req.params.id);
+  await ensureUserExists(userId);
+  const { items, nextCursor } = await paginate(
+    (filter) => Following.find(filter).populate({ path: "userID", select: USER_SUMMARY_FIELDS }).lean(),
+    { followingID: userId },
+    pageFrom(req)
+  );
+  sendPage(res, items.map((f) => toUserSummary(f.userID as any)).filter(Boolean), nextCursor);
 };
 
-export const getotherUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { error } = validateUserID(req.query);
-    if (error) {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-    const userData = await findProfile(req.query.userID as string, req.query.userID === req.user.userID);
-    if (userData.length === 0) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-    res.status(200).json({ success: true, userData: userData });
-  } catch (error) {
-    next(error);
-  }
+// GET /users/:id/following
+export const getFollowing = async (req: Request, res: Response) => {
+  const userId = String(req.params.id);
+  await ensureUserExists(userId);
+  const { items, nextCursor } = await paginate(
+    (filter) => Following.find(filter).populate({ path: "followingID", select: USER_SUMMARY_FIELDS }).lean(),
+    { userID: userId },
+    pageFrom(req)
+  );
+  sendPage(res, items.map((f) => toUserSummary(f.followingID as any)).filter(Boolean), nextCursor);
 };
 
-export const searchUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+// POST /users/:id/follow. Idempotent: following someone twice is fine.
+export const follow = async (req: Request, res: Response) => {
+  const me = req.user.userID;
+  const target = String(req.params.id);
+  if (target === me) throw badRequest("You can't follow yourself");
+  await ensureUserExists(target);
   try {
-    const { error } = validateSearch(req.body);
-    if (error) {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-    // Escape the input so characters like ".*(" are matched literally
-    const text = new RegExp(escapeRegex(req.body.username), "i");
-
-    const user = await User.find({
-      $or: [{ Username: text }, { Name: text }],
-    })
-      .select("-_id -__v -EmailVerified -Email -Auth0ID -Posts -SavedPosts -Followers -Followings -Stories")
-      .limit(20);
-    res.status(200).json({ success: true, message: "User found", user: user });
-  } catch (error) {
-    next(error);
+    await Following.updateOne({ userID: me, followingID: target }, {}, { upsert: true });
+  } catch (error: any) {
+    // Two follow requests at once: the unique index stops the second, which is fine
+    if (error.code !== 11000) throw error;
   }
+  send(res, { following: true, followerCount: await Following.countDocuments({ followingID: target }) });
+};
+
+// DELETE /users/:id/follow
+export const unfollow = async (req: Request, res: Response) => {
+  const target = String(req.params.id);
+  await Following.deleteOne({ userID: req.user.userID, followingID: target });
+  send(res, { following: false, followerCount: await Following.countDocuments({ followingID: target }) });
+};
+
+// DELETE /users/me/followers/:id. Stop someone from following you.
+export const removeFollower = async (req: Request, res: Response) => {
+  const result = await Following.deleteOne({ userID: String(req.params.id), followingID: req.user.userID });
+  send(res, { removed: result.deletedCount === 1 });
+};
+
+// GET /users/me/saved
+export const getSavedPosts = async (req: Request, res: Response) => {
+  const { items, nextCursor } = await paginate(
+    (filter) => SavedPost.find(filter).populate({ path: "postId", populate: POST_AUTHOR }).lean(),
+    { userId: req.user.userID },
+    pageFrom(req)
+  );
+  // A saved post may have been deleted since
+  const posts = items.map((saved) => saved.postId as any).filter(Boolean);
+  sendPage(res, await buildPosts(posts, req.user.userID), nextCursor);
 };

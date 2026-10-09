@@ -1,32 +1,23 @@
-import {Router} from "express";
-import { verifyToken } from "../middleware/isAuthorized";
+import { Router } from "express";
 import upload from "../middleware/upload";
-import { AddtoSaved, RemoveFromSaved, addLikes, createComment, deleteComment, deletePost, deleteReply, getAllComments, getPost, newPost, replyComment, unlike } from "../controllers/post";
+import { validate } from "../middleware/validate";
+import { idParams, pageOnly } from "../lib/validation";
+import { createPostBody, textBody } from "../services/post.service";
+import { createPost, deletePost, getPost, like, save, unlike, unsave } from "../controllers/post";
+import { createComment, getComments } from "../controllers/comment";
 
 const PostRoutes = Router();
 
-const PostUpload=upload.array('images',10)
+PostRoutes.post("/", upload.array("images", 10), validate({ body: createPostBody }), createPost);
+PostRoutes.get("/:id", validate({ params: idParams }), getPost);
+PostRoutes.delete("/:id", validate({ params: idParams }), deletePost);
 
-// verifyToken runs first, so files are only read for logged-in users
-PostRoutes.post('/newpost',verifyToken,PostUpload,newPost)
-PostRoutes.post('/deletepost',verifyToken,deletePost)
-PostRoutes.post('/likepost',verifyToken, addLikes)
-PostRoutes.post('/unlikepost',verifyToken, unlike)
+PostRoutes.post("/:id/like", validate({ params: idParams }), like);
+PostRoutes.delete("/:id/like", validate({ params: idParams }), unlike);
+PostRoutes.post("/:id/save", validate({ params: idParams }), save);
+PostRoutes.delete("/:id/save", validate({ params: idParams }), unsave);
 
-// routes for saved post
-PostRoutes.post('/savepost',verifyToken, AddtoSaved)
-PostRoutes.post('/removesaved', verifyToken, RemoveFromSaved)
-
-
-//routes for comments
-PostRoutes.post('/comment',verifyToken, createComment)
-PostRoutes.post('/allcomments',verifyToken, getAllComments)
-PostRoutes.delete('/removecomment',verifyToken, deleteComment)
-PostRoutes.post('/replycomment',verifyToken, replyComment)
-PostRoutes.delete('/removereply',verifyToken, deleteReply)
-
-// registered last so it doesn't swallow the fixed paths above
-PostRoutes.get('/:postId',verifyToken, getPost)
-
+PostRoutes.get("/:id/comments", validate({ params: idParams, query: pageOnly }), getComments);
+PostRoutes.post("/:id/comments", validate({ params: idParams, body: textBody }), createComment);
 
 export default PostRoutes

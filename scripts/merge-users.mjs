@@ -43,13 +43,12 @@ console.log(`Secondary: ${S.map((id) => `${name(id)} (${id})`).join(", ")}\n`);
 
 // ---- backup every document that mentions one of these users ----
 const backup = {
-  users: await col("users").find({ $or: [{ _id: { $in: all } }, { Followers: { $in: [Pstr, ...Sstr] } }, { Followings: { $in: [Pstr, ...Sstr] } }] }).toArray(),
+  users: await col("users").find({ _id: { $in: all } }).toArray(),
   posts: await col("posts").find({ $or: [{ userId: { $in: all } }, { likes: { $in: all } }] }).toArray(),
   comments: await col("comments").find({ $or: [{ userId: { $in: all } }, { "replies.userId": { $in: [Pstr, ...Sstr] } }] }).toArray(),
   savedposts: await col("savedposts").find({ userId: { $in: all } }).toArray(),
   stories: await col("stories").find({ userId: { $in: all } }).toArray(),
   followings: await col("followings").find({ $or: [{ userID: { $in: all } }, { followingID: { $in: all } }] }).toArray(),
-  followers: await col("followers").find({ $or: [{ userID: { $in: all } }, { followerID: { $in: all } }] }).toArray(),
   chats: await col("chats").find({ members: { $in: all } }).toArray(),
 };
 backup.messages = await col("messages").find({ chatId: { $in: backup.chats.map((c) => c._id) } }).toArray();
@@ -92,7 +91,7 @@ try {
   log(`saved posts moved: ${savedMoved}, duplicates dropped: ${savedDropped}`);
 
   // Follow relationships: point them at the primary; drop self-follows and duplicates
-  for (const [collection, a, b] of [["followings", "userID", "followingID"], ["followers", "userID", "followerID"]]) {
+  for (const [collection, a, b] of [["followings", "userID", "followingID"]]) {
     const seen = new Set();
     let moved = 0, dropped = 0;
     const docs = await col(collection).find({ $or: [{ [a]: { $in: all } }, { [b]: { $in: all } }] }, o).toArray();
@@ -134,28 +133,10 @@ try {
   log(`chats moved: ${chatsMoved}, merged into existing: ${chatsMerged}, self-chats deleted: ${chatsDeleted}`);
   log(`messages moved: ${(await col("messages").updateMany({ senderId: { $in: S } }, { $set: { senderId: P } }, o)).modifiedCount}`);
 
-  // Rebuild the primary's lists from the collections (the source of truth)
-  const ids = async (name, filter, field = "_id") => (await col(name).find(filter, o).toArray()).map((d) => d[field]);
-  await col("users").updateOne({ _id: P }, { $set: {
-    Posts: await ids("posts", { userId: P }),
-    Stories: await ids("stories", { userId: P }),
-    SavedPosts: (await ids("savedposts", { userId: P })).map(String),
-    Followings: (await ids("followings", { userID: P }, "followingID")).map(String),
-    Followers: (await ids("followers", { userID: P }, "followerID")).map(String),
-  } }, o);
-  // Other users' follow lists: replace secondary ids with the primary's
-  let othersFixed = 0;
-  for (const user of await col("users").find({ _id: { $nin: all }, $or: [{ Followers: { $in: Sstr } }, { Followings: { $in: Sstr } }] }, o).toArray()) {
-    const fix = (list = []) => [...new Set(list.map((id) => (Sstr.includes(id) ? Pstr : id)))];
-    await col("users").updateOne({ _id: user._id }, { $set: { Followers: fix(user.Followers), Followings: fix(user.Followings) } }, o);
-    othersFixed++;
-  }
-  log(`other users' follow lists updated: ${othersFixed}`);
-
   log(`secondary accounts deleted: ${(await col("users").deleteMany({ _id: { $in: S } }, o)).deletedCount}`);
 
-  const merged = await col("users").findOne({ _id: P }, o);
-  console.log(`\nResult for ${merged.Username}: ${merged.Posts.length} posts, ${merged.Followers.length} followers, ${merged.Followings.length} following, ${merged.SavedPosts.length} saved, ${merged.Stories.length} stories`);
+  const count = (name, filter) => col(name).countDocuments(filter, o);
+  console.log(`\nResult for ${name(P)}: ${await count("posts", { userId: P })} posts, ${await count("followings", { followingID: P })} followers, ${await count("followings", { userID: P })} following, ${await count("savedposts", { userId: P })} saved, ${await count("stories", { userId: P })} stories`);
 
   if (apply) {
     await session.commitTransaction();

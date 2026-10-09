@@ -283,21 +283,85 @@ catches that error (`E11000`) and retries with another name. The index uses a ca
 
 ---
 
-## ⚠️ Changes a client/frontend must make
+# Part 2: API v2, preparing for a frontend
 
-| What | Before | After |
-|---|---|---|
-| Login | browser visits `/api/login`, gets the API's own JWT | frontend logs in with an Auth0 SDK and sends the **Auth0 access token** (see [AUTH.md](AUTH.md)) |
-| Socket connect | `io(url)` then `emit("addUser", { userId })` | `io(url, { auth: { token } })` with the Auth0 access token; no `addUser` |
-| Socket send | `emit("privateMessage", { userId, message })` | `emit("privateMessage", { chatId, message }, ack)` |
-| Socket receive | `{ senderSocketId, message }` | the saved Message document (`_id, chatId, senderId, message, …`) |
-| `/api/messages/*` `success` | strings `"true"`/`"false"` (**both truthy!**) | booleans |
-| Message/chat not found, not yours | 400 | 404 |
-| `/api/login`, `/api/logout` | existed | removed; the Auth0 SDK handles both; the first API call creates the account |
-| `searchUser`, `getuserprofile` (others) | included `Email`, `Auth0ID` | not included |
-| `newpost` | worked with no images (then crashed) | 400 unless at least 1 image |
-| Saving an already saved post | hung | 400 `Post already saved` |
-| Image URLs | expiring S3 links | `<API_URL>/api/media/...` (stable) |
+Every route and response was redesigned before any frontend existed (the cheapest time to do it).
+The full reference is [API.md](API.md). The lessons:
+
+## 20. Use HTTP the way it's meant: resources + methods
+
+Before: `POST /api/posts/allcomments` (a read sent as POST), `DELETE /api/posts/removecomment` with
+the id in a JSON body, and names like `/addFollowing`, `/getuserprofile`. After: the URL names the
+**thing**, and the method says what to do with it:
+
+```
+GET    /api/posts/:id/comments      read
+POST   /api/posts/:id/comments      create
+DELETE /api/comments/:id            delete
+POST   /api/users/:id/follow        follow      DELETE same URL → unfollow
+```
+
+Reads that use GET can be cached, retried and opened in a browser. Ids in the URL can be validated by
+the route, and every client library expects this shape.
+
+## 21. One response shape everywhere
+
+Before: `userData: [user]` (an array for one user), `post`, `comments`, `chat`, `data`,
+`status: true` instead of `success`, and `"true"` as a string. After: always `{ success, data }`, plus
+`nextCursor` for lists, and errors are always `{ success: false, message }`. The frontend needs **one**
+fetch helper.
+
+## 22. A DTO layer between the database and the API
+
+`lib/dto.ts` turns database documents into API objects. Field names become camelCase, `_id` becomes
+`id`, S3 keys become URLs, the author is embedded, and counts and "liked by me" are added. The database
+kept its PascalCase field names. **Your storage format and your API are separate contracts**: you can
+change one without breaking the other.
+
+## 23. Paginate with a cursor, and avoid N+1 queries
+
+- Lists used to return *everything*. Now they return 20 at a time, plus a `nextCursor` (the id of the
+  last item). The next page is "items older than that id". Unlike `?page=2` (skip/offset), new posts
+  arriving don't shift the pages, so you never see duplicates or miss items.
+- Showing 20 posts with "comment count" and "saved by me" could take 40 extra queries, two per
+  post: the **N+1 problem**. `buildPosts` fetches them for the whole page in **2** queries
+  (`services/post.service.ts`). The same goes for chat participants and last messages.
+
+## 24. One source of truth (follow-up to lesson 8)
+
+The user arrays (`Followers`, `Posts`, `SavedPosts`…) and the mirror `followers` collection are
+gone (`scripts/migrate-v2.mjs`). Counts are computed from the real collections, so they **can't** drift.
+Unique indexes guarantee "follow once" and "save once" at the database level.
+
+## 25. Idempotent writes
+
+`POST /users/:id/follow` twice = still following, `200` both times. The same goes for like and save.
+Double-clicks, retries and two open tabs can't cause errors or duplicates. (The old API answered the
+second request with "already liked"/"already saved" errors that the UI had to special-case.)
+
+## 26. Throw errors, don't hand-write every response
+
+Express 5 sends errors thrown in async handlers to the error handler automatically. Controllers now
+`throw notFound("Post")` (`lib/http.ts`) instead of writing `return res.status(404).json(...)` by hand,
+which also makes lesson 1's "forgot the `return`" bug impossible. Validation moved into the routes:
+`validate({ params, query, body })` runs before the controller.
+
+## 27. Tests that can fail
+
+`npm test` runs 36 tests against the real app, in-process, with an in-memory MongoDB, a fake Auth0
+and a fake S3 (`test/helpers.ts`). To check that the tests aren't just passing, two bugs were planted on
+purpose: a missing route, and a missing "is it your message?" check. Both were caught. A test you've never
+seen fail isn't proof of anything.
+
+## 28. Production basics
+
+- `GET /health` lets Render check that the app (and its database) is up.
+- **Graceful shutdown:** on SIGTERM (sent by Render during a deploy), the server stops accepting connections,
+  finishes running requests, closes the database, then exits. Requests aren't cut off mid-way.
+- `helmet` security headers, with `Cross-Origin-Resource-Policy: cross-origin` so the frontend can
+  still load images.
+- Rate limiting (300/min per IP), with `trust proxy` so Render's proxy doesn't make everyone share one IP.
+- The OpenAPI spec is the contract with the frontend, and a test fails if a documented route is missing.
 
 ## One-off database steps
 
@@ -313,10 +377,12 @@ catches that error (`E11000`) and retries with another name. The index uses a ca
      so the expired links now work again through `/api/media/…`.
    - Moved a conversation that had been saved in the wrong chat.
    - Removed likes and comment ids pointing at deleted things.
-   - Rebuilt every user's Posts/Followers/Followings/SavedPosts/Stories lists from the collections.
 
    It's safe to run again any time: it does a dry run first, writes a backup, and makes no change when
    nothing is broken.
+3. **v2 data model** (✅ done on 2026-10-09 with `scripts/migrate-v2.mjs`): removed the duplicated user
+   arrays and post fields, folded `followers` into `followings`, and set each chat's `updatedAt` to its
+   last message. The 5 old leading-slash S3 copies were deleted after verifying the new ones.
 
 ## Environment variables
 
@@ -324,19 +390,22 @@ Removed: `JWTKEY`, `AUTH0SECRET`, `AUTH0CLIENTID`, `AUTH0BASEURL`.
 
 | Variable | Default | Purpose |
 |---|---|---|
+| `PORT` | `4000` | So it doesn't clash with Next.js on 3000 |
 | `AUTH0_AUDIENCE` | required | Identifier of the Auth0 API (see [AUTH.md](AUTH.md)) |
 | `API_URL` | `http://localhost:<PORT>` | Public URL of this API, used in image links |
 | `AUTH0_TEST_CLIENT_ID` / `_SECRET` | none | Dev only, for `npm run token` |
 | `AWS_BUCKET` | `fwstorage-trial` | S3 bucket |
 | `AWS_REGION` | `eu-west-2` | S3 region |
 | `CLIENT_ORIGIN` | `*` | Allowed browser origin for the API and socket.io. Set it to your frontend's URL in production |
+| `RATE_LIMIT_PER_MINUTE` | `300` | Requests per minute per IP on `/api` |
+| `AUTH0_MGMT_CLIENT_ID` / `_SECRET` | none | Only for `scripts/link-accounts.mjs` |
 
 ## Deploying on Render (later)
 
 - New **Web Service** from the GitHub repo.
-- Build command: `npm ci && npm run build`. Start command: `npm start`.
+- Build command: `npm ci && npm run build`. Start command: `npm start`. Health check path: `/health`.
 - Add the variables from `.env` in the Render dashboard, **except** the `AUTH0_TEST_*` ones. Render sets
   `PORT` itself. Set `API_URL` to the Render URL, and `CLIENT_ORIGIN` to your frontend's URL.
 - `PROD_ENV=Production` turns off debug logs and hides error details.
-- Render runs a long-lived server, so socket.io and the cron jobs work there (unlike Vercel's serverless functions).
+- Render runs a long-lived server, so socket.io and the cron job work there (unlike Vercel's serverless functions).
   On the free plan the service sleeps when idle, and cron jobs don't run while it's asleep.

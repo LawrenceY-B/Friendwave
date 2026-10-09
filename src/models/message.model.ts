@@ -3,11 +3,10 @@ import { IMessage } from "../interfaces/chat.interface";
 
 const MessageSchema = new Schema<IMessage>(
   {
-    chatId: { type: Schema.Types.ObjectId },
-    senderId: { type: Schema.Types.ObjectId },
-    message: { type: String },
-    dateTime: { type: Date },
-    // saved:{type:Boolean}
+    chatId: { type: Schema.Types.ObjectId, required: true, index: true },
+    senderId: { type: Schema.Types.ObjectId, required: true },
+    message: { type: String, required: true },
+    editedAt: { type: Date },
   },
   { timestamps: true }
 );

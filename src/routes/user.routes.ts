@@ -1,28 +1,28 @@
-import {Router} from "express";
-import { verifyToken } from "../middleware/isAuthorized";
+import { Router } from "express";
 import upload from "../middleware/upload";
-import { getFollowers, getFollowing, newFollow, removeFollow, unFollow, AddBio, deleteBio, getUser, editProfile, getotherUser, searchUser } from "../controllers/user";
+import { validate } from "../middleware/validate";
+import { idParams, pageOnly } from "../lib/validation";
+import { searchQuery, updateProfileBody } from "../services/user.service";
+import {
+  follow, getFollowers, getFollowing, getMe, getSavedPosts, getUser, getUserPosts,
+  removeFollower, searchUsers, unfollow, updateMe,
+} from "../controllers/user";
 
+const UserRoutes = Router();
 
- const UserRoutes= Router();
-//following & unfollowing functions
- UserRoutes.post('/addFollowing',verifyToken,newFollow)
- UserRoutes.post('/unfollow',verifyToken,unFollow)
- UserRoutes.get('/getFollowing',verifyToken, getFollowing)
- UserRoutes.get('/getFollowers',verifyToken, getFollowers)
- UserRoutes.post('/removeFollower',verifyToken, removeFollow)
+UserRoutes.get("/", validate({ query: searchQuery }), searchUsers);
 
+// "/me" routes come before "/:id" so "me" isn't treated as an id
+UserRoutes.get("/me", getMe);
+UserRoutes.patch("/me", upload.single("avatar"), validate({ body: updateProfileBody }), updateMe);
+UserRoutes.get("/me/saved", validate({ query: pageOnly }), getSavedPosts);
+UserRoutes.delete("/me/followers/:id", validate({ params: idParams }), removeFollower);
 
- UserRoutes.get('/getUser',verifyToken, getUser)
- UserRoutes.get('/getuserprofile',verifyToken, getotherUser)
- UserRoutes.post('/searchuser',verifyToken,searchUser)
+UserRoutes.get("/:id", validate({ params: idParams }), getUser);
+UserRoutes.get("/:id/posts", validate({ params: idParams, query: pageOnly }), getUserPosts);
+UserRoutes.get("/:id/followers", validate({ params: idParams, query: pageOnly }), getFollowers);
+UserRoutes.get("/:id/following", validate({ params: idParams, query: pageOnly }), getFollowing);
+UserRoutes.post("/:id/follow", validate({ params: idParams }), follow);
+UserRoutes.delete("/:id/follow", validate({ params: idParams }), unfollow);
 
-
- //Bio & profile
- UserRoutes.post('/addBio',verifyToken, AddBio)
- UserRoutes.delete('/deleteBio',verifyToken, deleteBio)
- // verifyToken runs first, so files are only read for logged-in users
- UserRoutes.put('/editprofile',verifyToken,upload.single('images'), editProfile)
-
-
- export default UserRoutes
+export default UserRoutes

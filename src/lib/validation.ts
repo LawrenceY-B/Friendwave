@@ -12,3 +12,14 @@ export const objectId = () =>
 // user input is matched literally (prevents regex injection / ReDoS).
 export const escapeRegex = (text: string) =>
   text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// ?cursor=&limit= accepted by every list endpoint
+export const pageQuery = {
+  cursor: objectId(),
+  limit: joi.number().integer().min(1).max(50),
+};
+
+// /:id route parameter
+export const idParams = joi.object({ id: objectId().required() });
+
+export const pageOnly = joi.object(pageQuery);

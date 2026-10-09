@@ -1,88 +1,53 @@
-import { Request, Response, NextFunction } from "express";
-import { validateChat } from "../services/chat.service";
+import { Request, Response } from "express";
+import { Types } from "mongoose";
 import Chat from "../models/conversation.model";
 import Message from "../models/message.model";
 import User from "../models/user.model";
+import { toChat, USER_SUMMARY_FIELDS } from "../lib/dto";
+import { badRequest, notFound, send } from "../lib/http";
+import { findChatForMember } from "../services/chat.service";
 
-// new chat
-export const newChat = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { error } = validateChat(req.body);
-    if (error)
-      return res
-        .status(400)
-        .json({ success: false, message: error.details[0].message });
-    const userID = req.user.userID;
-    const { receiverID } = req.body;
-
-    if (receiverID === userID) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Can't start a chat with yourself" });
-    }
-    if (!(await User.exists({ _id: receiverID }))) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
-    }
-
-    const isExisting = await Chat.findOne({
-      members: { $all: [userID, receiverID] },
-    });
-    if (isExisting) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Chat already exists" });
-    }
-    // create() saves once; a failed save throws, so no "if (!saved)" check is needed
-    await Chat.create({ members: [userID, receiverID] });
-
-    res.status(201).json({ success: true, message: "Chat created" });
-  } catch (error) {
-    // An empty catch {} hides the error AND leaves the request hanging
-    next(error);
-  }
+// Adds the other participants' names/pictures and each chat's last message,
+// using one query for all users and one for all last messages.
+const buildChats = async (chats: Record<string, any>[], viewerId: string) => {
+  const memberIds = [...new Set(chats.flatMap((chat) => chat.members.map(String)))];
+  const [users, lastMessages] = await Promise.all([
+    User.find({ _id: { $in: memberIds } }).select(USER_SUMMARY_FIELDS).lean(),
+    Message.aggregate([
+      { $match: { chatId: { $in: chats.map((chat) => chat._id) } } },
+      { $sort: { _id: -1 } },
+      { $group: { _id: "$chatId", message: { $first: "$$ROOT" } } },
+    ]),
+  ]);
+  const usersById = new Map(users.map((user) => [String(user._id), user as Record<string, any>]));
+  const lastByChat = new Map(lastMessages.map((m) => [String(m._id), m.message]));
+  return chats.map((chat) => toChat(chat, viewerId, usersById, lastByChat.get(String(chat._id)) ?? null));
 };
 
-//get chat
-export const getAllChats = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const senderID = req.user.userID;
-    const chat = await Chat.find({
-      members: { $in: [senderID] },
-    });
-    res.status(200).json({ success: true, message: "Chat found", chat });
-  } catch (error) {
-    next(error);
-  }
+// GET /chats. Most recently active first. (Not paginated: people have few chats.)
+export const getChats = async (req: Request, res: Response) => {
+  const me = req.user.userID;
+  const chats = await Chat.find({ members: me }).sort({ updatedAt: -1 }).lean();
+  send(res, await buildChats(chats, me));
 };
 
-//delete chat
-export const deleteChat = async (
-    req: Request,
-    res:Response,
-    next: NextFunction
-) => {
-    try {
-        const chatID = req.params.id;
-        // Only a member of the chat can delete it
-        const chat = await Chat.findOneAndDelete({ _id: chatID, members: req.user.userID });
-        if (!chat) {
-            return res
-                .status(404)
-                .json({ success: false, message: "Chat does not exist" });
-        }
-        await Message.deleteMany({ chatId: chat._id });
-        res.status(200).json({ success: true, message: "Chat deleted" });
-    } catch (error) {
-        next(error);
-    }
-}
+// POST /chats  { userId }. Returns the existing chat with that person, or creates one.
+export const createChat = async (req: Request, res: Response) => {
+  const me = req.user.userID;
+  const other: string = req.body.userId;
+  if (other === me) throw badRequest("You can't start a chat with yourself");
+  if (!(await User.exists({ _id: other }))) throw notFound("User");
+
+  const members = [new Types.ObjectId(me), new Types.ObjectId(other)];
+  const existing = await Chat.findOne({ members: { $all: members, $size: 2 } }).lean();
+  const chat = existing ?? (await Chat.create({ members })).toObject();
+  const [result] = await buildChats([chat], me);
+  send(res, result, existing ? 200 : 201);
+};
+
+// DELETE /chats/:id. Members only; deletes its messages too.
+export const deleteChat = async (req: Request, res: Response) => {
+  const chat = await findChatForMember(String(req.params.id), req.user.userID);
+  await Promise.all([Chat.deleteOne({ _id: chat._id }), Message.deleteMany({ chatId: chat._id })]);
+  send(res, null);
+};

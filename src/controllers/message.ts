@@ -1,89 +1,54 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import Message from "../models/message.model";
-import { findChatForMember, validateMessage } from "../services/chat.service";
+import Chat from "../models/conversation.model";
+import { toMessage } from "../lib/dto";
+import { notFound, pageFrom, paginate, send, sendPage } from "../lib/http";
+import { emitToUsers } from "../lib/realtime";
+import { findChatForMember, sendMessage } from "../services/chat.service";
 
-export const newMessage = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { error } = validateMessage(req.body);
-    if (error) {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-    const senderId = req.user.userID;
-    const chatId = String(req.params.id);
-    if (!(await findChatForMember(chatId, senderId))) {
-      return res.status(404).json({ success: false, message: "Chat not found" });
-    }
-
-    // Without `await`, save() returns a Promise, which is always truthy,
-    // and any database error would be lost.
-    const sent = await Message.create({
-      message: req.body.message,
-      senderId,
-      chatId,
-      dateTime: Date.now(),
-    });
-    res.status(200).json({ success: true, message: "Message Sent", data: sent });
-  } catch (error) {
-    next(error);
-  }
+// GET /chats/:id/messages. Newest first; use nextCursor to load older ones.
+export const getMessages = async (req: Request, res: Response) => {
+  const chat = await findChatForMember(String(req.params.id), req.user.userID);
+  const { items, nextCursor } = await paginate(
+    (filter) => Message.find(filter).lean(),
+    { chatId: chat._id },
+    pageFrom(req)
+  );
+  sendPage(res, items.map(toMessage), nextCursor);
 };
 
-export const getMessages = async (
-    req:Request,
-    res:Response,
-    next:NextFunction
-)=>{
-    try {
-        const chatId = String(req.params.id);
-        if (!(await findChatForMember(chatId, req.user.userID))) {
-            return res.status(404).json({ success: false, message: "Chat not found" });
-        }
-        const getMessage = await Message.find({chatId: chatId}).sort({ createdAt: 1 })
-        res.status(200).json({success: true, message: "Messages Found", data:getMessage });
+// POST /chats/:id/messages  { text }. Also delivered live as "message:new".
+export const createMessage = async (req: Request, res: Response) => {
+  send(res, await sendMessage(String(req.params.id), req.user.userID, req.body.text), 201);
+};
 
-    } catch (error) {
-        next(error)
-    }
-}
+// Finds a message the current user sent (anyone else gets "not found")
+const findOwnMessage = async (messageId: string, userId: string) => {
+  const message = await Message.findOne({ _id: messageId, senderId: userId }).lean();
+  if (!message) throw notFound("Message");
+  return message;
+};
 
-export const deleteMessage = async (
-    req:Request,
-    res:Response,
-    next:NextFunction
-) => {
-    try {
-        const {messageId} = req.params;
-        // Matching on senderId means you can only delete your own messages
-        const deleted = await Message.findOneAndDelete({ _id: messageId, senderId: req.user.userID });
-        if(!deleted){
-            return res.status(404).json({success: false, message: "Message not found" });
-        }
-        res.status(200).json({success: true, message: "Message deleted" });
-    } catch (error) {
-       next(error);
-    }
-}
+const membersOf = async (chatId: unknown) =>
+  (await Chat.findById(chatId).select("members").lean())?.members ?? [];
 
-export const editMessage = async (
-    req:Request,
-    res:Response,
-    next:NextFunction
-) => {
-    try {
-        const { error } = validateMessage(req.body);
-        if (error) {
-            return res.status(400).json({ success: false, message: error.message });
-        }
-        const {messageId} = req.params;
-        const edited = await Message.findOneAndUpdate(
-            { _id: messageId, senderId: req.user.userID },
-            { message: req.body.message }
-        );
-        if(!edited){
-            return res.status(404).json({success: false, message: "Message not found" });
-        }
-        res.status(200).json({success: true, message: "Message edited" });
-    } catch (error) {
-        next(error);
-    }
-}
+// PATCH /messages/:id  { text }. Sender only. Delivered live as "message:updated".
+export const editMessage = async (req: Request, res: Response) => {
+  const own = await findOwnMessage(String(req.params.id), req.user.userID);
+  const updated = await Message.findByIdAndUpdate(
+    own._id,
+    { message: req.body.text, editedAt: new Date() },
+    { returnDocument: "after" }
+  ).lean();
+  const message = toMessage(updated!);
+  emitToUsers(await membersOf(own.chatId), "message:updated", message);
+  send(res, message);
+};
+
+// DELETE /messages/:id. Sender only. Delivered live as "message:deleted".
+export const deleteMessage = async (req: Request, res: Response) => {
+  const own = await findOwnMessage(String(req.params.id), req.user.userID);
+  await Message.deleteOne({ _id: own._id });
+  emitToUsers(await membersOf(own.chatId), "message:deleted", { id: String(own._id), chatId: String(own.chatId) });
+  send(res, null);
+};

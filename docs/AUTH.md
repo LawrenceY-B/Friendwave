@@ -40,7 +40,7 @@ Code: `lib/auth0.ts` (verify token, fetch profile), `services/auth.service.ts` (
    - AUTH0CLIENTID=...
    - AUTH0BASEURL=...
    + AUTH0_AUDIENCE=https://api.friendwave
-   + API_URL=http://localhost:3000        # optional, this is the default
+   + API_URL=http://localhost:4000        # optional, this is the default
      ISSUERBASEURL=https://dev-xxxx.us.auth0.com   # unchanged
    ```
 
@@ -72,7 +72,7 @@ TOKEN=$(npm run -s token -- alice@test.com 'Str0ng-pass!' --signup)
 TOKEN=$(npm run -s token -- alice@test.com 'Str0ng-pass!')
 
 # first call creates alice's Friendwave account
-curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/users/getUser
+curl -H "Authorization: Bearer $TOKEN" http://localhost:4000/api/users/me
 ```
 
 Make two or three users (alice, bob, carol) to test follows, chats and permissions between them.
@@ -83,35 +83,18 @@ If the token request fails with *"Client is not authorized to access …"*, open
 
 > Before going live: delete the test application, or at least untick its Password grant.
 
-## Frontend (when you build it)
+## Frontend
 
-React example with `@auth0/auth0-react`:
-
-```tsx
-<Auth0Provider
-  domain="dev-xxxx.us.auth0.com"
-  clientId="<SPA application client id>"
-  authorizationParams={{
-    redirect_uri: window.location.origin,
-    audience: "https://api.friendwave",       // = AUTH0_AUDIENCE
-    scope: "openid profile email",            // needed so the API can read the profile of new users
-  }}
->
-
-const { getAccessTokenSilently } = useAuth0();
-const token = await getAccessTokenSilently();
-fetch(`${API_URL}/api/users/getUser`, { headers: { Authorization: `Bearer ${token}` } });
-```
-
-Create a separate **Single Page Application** in Auth0 for the frontend, and add your frontend URL to
-its Allowed Callback / Logout / Web Origins. Set `CLIENT_ORIGIN` on the API to the same URL.
+See [API.md → Using it from Next.js](API.md#using-it-from-nextjs). In short: a **Regular Web
+Application** in Auth0 for the Next app, authorized on Friendwave API, with `audience` set to
+`AUTH0_AUDIENCE` and `scope: "openid profile email"`.
 
 ## Automated tests
 
-Tests don't need Auth0 at all: start a tiny fake issuer that serves `/.well-known/jwks.json` and
-`/userinfo`, sign tokens with its key (`jose`'s `SignJWT`), and point `ISSUERBASEURL` at it.
-That's how this setup was verified: wrong audience, wrong issuer, unknown key, expired and HS256 tokens
-are rejected, and simultaneous first requests create exactly one user.
+`npm test` needs no Auth0 at all. `test/helpers.ts` starts a tiny fake issuer that serves
+`/.well-known/jwks.json` and `/userinfo`, signs tokens with its own key, and points `ISSUERBASEURL`
+at it. The tests check that wrong-audience, wrong-issuer, unknown-key, expired and garbage tokens are
+rejected, and that simultaneous first requests create exactly one user.
 
 ## Account linking (one person, several logins)
 
@@ -120,9 +103,12 @@ so it gets its own Friendwave account. To give a person one account:
 
 1. **Link the identities in Auth0.** Choose the primary (the one whose Friendwave account has the data)
    and attach the others with the Management API:
-   `POST https://<tenant>/api/v2/users/{primary_sub}/identities` with `{ "provider": "apple", "user_id": "…" }`.
+   ```bash
+   node scripts/link-accounts.mjs <primarySub> <secondarySub>    # e.g. google-oauth2|… apple|…
+   ```
    This needs a Machine-to-Machine application authorized for the *Auth0 Management API*
-   (`read:users`, `update:users`). After linking, every login method returns the primary `sub`.
+   (`read:users`, `update:users`), with `AUTH0_MGMT_CLIENT_ID` / `AUTH0_MGMT_CLIENT_SECRET` in `.env`.
+   After linking, every login method returns the primary `sub`.
 2. **Merge the Friendwave accounts.** The secondary accounts are now orphaned, so merge them:
    ```bash
    node scripts/merge-users.mjs <primaryUserId> <secondaryUserId> [...]          # dry run

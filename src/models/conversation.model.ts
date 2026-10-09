@@ -3,7 +3,7 @@ import { IChats } from "../interfaces/chat.interface";
 
 const ChatsSchema = new Schema<IChats>(
   {
-    members: [{ type: Schema.Types.ObjectId }],
+    members: { type: [{ type: Schema.Types.ObjectId, ref: "User" }], index: true },
   },
   { timestamps: true }
 );

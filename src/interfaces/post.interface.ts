@@ -1,15 +1,11 @@
 import { Types } from "mongoose";
 
 export interface IPost {
-  postId: Types.ObjectId;
   userId: Types.ObjectId;
-  imageUrl: string []; // URL or reference to the image or video
-  caption: string;
-  likes: Types.ObjectId[]; // Array of user IDs who liked the post
-  comments: any[]; // Array of comment IDs
-  dateTime: Date; // Date and time of the post in ISO format (e.g., "2023-11-10T12:34:56.789Z")
-  saved: boolean;
-
+  imageUrl: string[]; // S3 keys
+  caption?: string;
+  likes: Types.ObjectId[]; // users who liked the post
+  dateTime: Date; // when it was posted
 }
 
 export interface ISavedPost {
@@ -17,18 +13,17 @@ export interface ISavedPost {
   postId: Types.ObjectId;
 }
 
-export interface IComment {
-  commentId: Types.ObjectId;
-  userId: Types.ObjectId;
-  postId: Types.ObjectId;
-  replies: IReplies[];
-  comment: string;
-  dateTime: Date;
-}
-export interface IReplies{
+export interface IReply {
   replyId: string;
   userId: string;
-  commentId: Types.ObjectId;
   reply: string;
-  dateTime: any;
+  dateTime: Date | number; // older replies stored a timestamp number
+}
+
+export interface IComment {
+  userId: Types.ObjectId;
+  postId: Types.ObjectId;
+  replies: IReply[];
+  comment: string;
+  dateTime: Date;
 }

@@ -33,12 +33,9 @@ const findOrCreateUser = async (auth0Id: string, token: string) => {
 
   // Retry if another request grabbed the same username in the meantime
   for (let attempt = 0; attempt < 3; attempt++) {
-    const _id = new Types.ObjectId();
     const username = await pickUsername(base);
     try {
       return await User.create({
-        _id,
-        UserID: _id,
         Auth0ID: auth0Id,
         Name: profile.name || username,
         Username: username,

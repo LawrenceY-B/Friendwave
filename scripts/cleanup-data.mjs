@@ -2,7 +2,6 @@
 //   1. old expiring S3 links → permanent S3 keys (files are copied to a clean key with the right type)
 //   2. messages stored in the wrong chat
 //   3. references to things that no longer exist (likes, comment ids, follows, saves, stories…)
-//   4. users' Posts/Followers/Followings/SavedPosts/Stories lists rebuilt from the collections
 //
 //   node scripts/cleanup-data.mjs                                    dry run (changes nothing)
 //   node scripts/cleanup-data.mjs --apply                            for real
@@ -38,7 +37,7 @@ const log = (msg) => console.log(`  ${msg}`);
 console.log(apply ? "APPLYING CHANGES\n" : "DRY RUN (nothing will change)\n");
 
 // ---- backup ----
-const COLLECTIONS = ["users", "posts", "comments", "savedposts", "stories", "followings", "followers", "chats", "messages"];
+const COLLECTIONS = ["users", "posts", "comments", "savedposts", "stories", "followings", "chats", "messages"];
 if (apply) {
   const backup = {};
   for (const name of COLLECTIONS) backup[name] = await col(name).find().toArray();
@@ -127,12 +126,9 @@ try {
   };
   report("posts: likes from deleted users removed", await col("posts").updateMany({ likes: { $elemMatch: { $nin: userIds } } }, { $pull: { likes: { $nin: userIds } } }, o));
   report("comments on deleted posts deleted", await col("comments").deleteMany({ postId: { $nin: postIds } }, o));
-  const commentIds = await idsOf("comments");
-  report("posts: ids of deleted comments removed", await col("posts").updateMany({ comments: { $elemMatch: { $nin: commentIds } } }, { $pull: { comments: { $nin: commentIds } } }, o));
   report("saved posts of deleted posts/users deleted", await col("savedposts").deleteMany({ $or: [{ postId: { $nin: postIds } }, { userId: { $nin: userIds } }] }, o));
   report("stories of deleted posts/users deleted", await col("stories").deleteMany({ $or: [{ postId: { $nin: postIds } }, { userId: { $nin: userIds } }] }, o));
   report("follows involving deleted users deleted", await col("followings").deleteMany({ $or: [{ userID: { $nin: userIds } }, { followingID: { $nin: userIds } }] }, o));
-  report("follower records involving deleted users deleted", await col("followers").deleteMany({ $or: [{ userID: { $nin: userIds } }, { followerID: { $nin: userIds } }] }, o));
   report("messages in deleted chats deleted", await col("messages").deleteMany({ chatId: { $nin: chatIds } }, o));
   const orphanComments = await col("comments").countDocuments({ userId: { $nin: userIds } }, o);
   if (orphanComments) log(`⚠ ${orphanComments} comments were written by deleted users (left as is; decide yourself)`);
@@ -141,24 +137,6 @@ try {
   const brokenChats = await col("chats").countDocuments({ members: { $elemMatch: { $nin: userIds } } }, o);
   if (brokenChats) log(`⚠ ${brokenChats} chats include a deleted user (left as is)`);
 
-  // ---- 4. rebuild each user's lists from the collections (the source of truth) ----
-  console.log("\n4. User lists");
-  const same = (a = [], b = []) => JSON.stringify(a.map(String).sort()) === JSON.stringify(b.map(String).sort());
-  for (const user of await col("users").find({}, o).toArray()) {
-    const of = async (name, filter, field = "_id") => (await col(name).find(filter, o).toArray()).map((d) => d[field]);
-    const lists = {
-      Posts: await of("posts", { userId: user._id }),
-      Stories: await of("stories", { userId: user._id }),
-      SavedPosts: (await of("savedposts", { userId: user._id })).map(String),
-      Followings: (await of("followings", { userID: user._id }, "followingID")).map(String),
-      Followers: (await of("followers", { userID: user._id }, "followerID")).map(String),
-    };
-    const changed = Object.keys(lists).filter((k) => !same(user[k], lists[k]));
-    if (changed.length) {
-      await col("users").updateOne({ _id: user._id }, { $set: lists }, o);
-      log(`${user.Username}: fixed ${changed.map((k) => `${k} (${(user[k] ?? []).length}→${lists[k].length})`).join(", ")}`);
-    }
-  }
 
   if (apply) {
     await session.commitTransaction();

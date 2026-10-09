@@ -1,72 +1,79 @@
 import express, { NextFunction, Request, Response } from "express";
-import { environment } from "./environments/endpoints.config";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
-
-import { DB_Connection } from "./database/db";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
+import mongoose from "mongoose";
+import { environment } from "./environments/endpoints.config";
 import ErrorHandler from "./middleware/errorhandler";
-import UserRoutes from "./routes/user.routes";
-import PostRoutes from "./routes/post.routes";
-import StoryRoutes from "./routes/story.routes";
-import MediaRoutes from "./routes/media.routes";
-import { storycheck, logcheck } from "./jobs/story.jobs";
-import Logger from "./lib/logger";
 import morganMiddleware from "./middleware/debughandler";
-import ChatRoutes from "./routes/chat.routes";
-import MessageRoutes from "./routes/message.routes";
+import { verifyToken } from "./middleware/isAuthorized";
+import ApiRoutes from "./routes";
+import MediaRoutes from "./routes/media.routes";
 import SocketManager from "./controllers/socket";
+import { setRealtimeServer } from "./lib/realtime";
+import { openapi } from "./docs/openapi";
 
-const app = express();
-const httpServer = createServer(app);
-const io = new SocketIOServer(httpServer, {
-  cors: { origin: environment.CLIENT_ORIGIN },
-});
-app
-  // Middleware runs in the order it is registered, so the request logger goes first
-  .use(morganMiddleware)
-  .use((req: Request, res: Response, next: NextFunction) => {
-    res.setHeader("Access-Control-Allow-Origin", environment.CLIENT_ORIGIN);
-    res.setHeader(
-      "Access-Control-Allow-Methods",
-      "GET, POST, PUT, PATCH, DELETE"
-    );
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
-    );
-    // Browsers send an OPTIONS "preflight" before cross-origin requests
-    if (req.method === "OPTIONS") return res.sendStatus(204);
-    next();
-  })
-  .use(express.json())
-  .use("/api/media", MediaRoutes)
-  .use("/api/users", UserRoutes)
-  .use("/api/posts", PostRoutes)
-  .use("/api/story", StoryRoutes)
-  .use("/api/chat", ChatRoutes)
-  .use("/api/messages", MessageRoutes);
+// Builds the Express app, HTTP server and socket.io server without starting
+// them, so tests can create the whole app in-process.
+export const createAppServer = () => {
+  const app = express();
+  // Render (and most hosts) put a proxy in front of the app; trust it so
+  // req.ip is the real client IP (needed for rate limiting)
+  app.set("trust proxy", 1);
 
-app.all("/{*splat}", (req: Request, res: Response) => {
-  res.status(404).json({ message: "Page Not Found 😔" });
-  Logger.http(`${req.method} - ${req.url} - ${req.ip} Page Not Found 🔦🔦`);
-});
+  app
+    // Middleware runs in the order it is registered, so the request logger goes first
+    .use(morganMiddleware)
+    // Security headers. Images must be loadable from the frontend's origin.
+    .use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }))
+    .use((req: Request, res: Response, next: NextFunction) => {
+      res.setHeader("Access-Control-Allow-Origin", environment.CLIENT_ORIGIN);
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      // Browsers send an OPTIONS "preflight" before cross-origin requests
+      if (req.method === "OPTIONS") return res.sendStatus(204);
+      next();
+    })
+    .use(express.json({ limit: "100kb" }));
 
-// Error handlers must be registered last
-app.use(ErrorHandler);
-
-new SocketManager(io);
-
-const start = async () => {
-  // Connect to the database before accepting requests
-  await DB_Connection();
-  storycheck();
-  logcheck();
-  httpServer.listen(environment.PORT, () => {
-    Logger.debug(`🚀🚀🚀Server is running on port ${environment.PORT}`);
+  // Public routes
+  app.get("/health", (req: Request, res: Response) => {
+    const dbUp = mongoose.connection.readyState === 1;
+    res.status(dbUp ? 200 : 503).json({ status: dbUp ? "ok" : "degraded", db: dbUp });
   });
-};
+  app.get("/api/openapi.json", (req: Request, res: Response) => {
+    res.json(openapi);
+  });
+  app.use("/api/media", MediaRoutes);
 
-start().catch((err) => {
-  Logger.error(err);
-  process.exit(1);
-});
+  // Everything else needs a logged-in user, and is rate limited per IP
+  app.use(
+    "/api",
+    rateLimit({
+      windowMs: 60 * 1000,
+      limit: environment.RATE_LIMIT_PER_MINUTE,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: { success: false, message: "Too many requests, slow down" },
+    }),
+    verifyToken,
+    ApiRoutes
+  );
+
+  app.all("/{*splat}", (req: Request, res: Response) => {
+    res.status(404).json({ success: false, message: "Route not found" });
+  });
+
+  // Error handlers must be registered last
+  app.use(ErrorHandler);
+
+  const httpServer = createServer(app);
+  const io = new SocketIOServer(httpServer, {
+    cors: { origin: environment.CLIENT_ORIGIN },
+  });
+  new SocketManager(io);
+  setRealtimeServer(io);
+
+  return { app, httpServer, io };
+};

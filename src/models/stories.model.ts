@@ -4,7 +4,7 @@ import { IStories } from "../interfaces/story.interface";
 const StoriesSchema = new Schema<IStories>(
   {
     storyId: { type: String, required: true },
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     postId: { type: Schema.Types.ObjectId, ref: "Posts", required: true },
     expireAt: {
       type: Date,

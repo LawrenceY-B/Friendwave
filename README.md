@@ -37,13 +37,20 @@ cp .env.example .env
 npm run dev
 
 
-Access Friend Wave at `http://localhost:3000`.
+The API runs at `http://localhost:4000` (`GET /health` to check). Endpoints, conventions and how to use
+it from Next.js: **[docs/API.md](docs/API.md)**. Machine-readable spec: `GET /api/openapi.json`.
 
-### Testing as a user
+### Tests
+
+```
+npm test        # 36 tests: every endpoint, auth, permissions, realtime. No network or real DB needed
+```
+
+### Trying it as a real user
 
 ```
 TOKEN=$(npm run -s token -- alice@test.com 'Str0ng-pass!' --signup)
-curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/users/getUser
+curl -H "Authorization: Bearer $TOKEN" http://localhost:4000/api/users/me
 ```
 
 See [docs/AUTH.md](docs/AUTH.md) for the one-time Auth0 setup this needs.
@@ -52,10 +59,22 @@ See [docs/AUTH.md](docs/AUTH.md) for the one-time Auth0 setup this needs.
 
 ```
 npm run build   # compiles TypeScript to ./build
-npm start       # runs ./build/app.js
+npm start       # runs ./build/server.js
 ```
 
-See [docs/CHANGES.md](docs/CHANGES.md) for the October 2026 upgrade notes, client-facing API changes and deployment notes (Render).
+### Maintenance scripts (`scripts/`)
+
+All database scripts do a dry run unless given `--apply`, and write a backup to `backups/` first.
+
+| Script | Purpose |
+|---|---|
+| `get-token.mjs` (`npm run token`) | Auth0 access token for a test user |
+| `link-accounts.mjs` | link two Auth0 logins of one person |
+| `merge-users.mjs` | merge Friendwave accounts after linking |
+| `cleanup-data.mjs` | repair broken references, misplaced messages, old image links |
+| `migrate-v2.mjs` | one-off migration to the v2 data model (done 2026-10-09) |
+
+See [docs/CHANGES.md](docs/CHANGES.md) for the October 2026 upgrade notes and lessons, and deployment notes (Render).
 
 ## Work Done
 
@@ -65,7 +84,8 @@ See [docs/CHANGES.md](docs/CHANGES.md) for the October 2026 upgrade notes, clien
 - Feature 4: Comments ✅
 - Feature 5: Stories ✅
 - Feature 6: Message ✅
-- Feature 7: Real-time Messaging (working on it 😮‍💨)
+- Feature 7: Real-time Messaging ✅
+- Feature 8: Feed, pagination, OpenAPI spec, tests ✅
 
 
 ## Contact

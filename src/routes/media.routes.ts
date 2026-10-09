@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { MEDIA_FOLDERS, signedUrl } from "../lib/s3";
+import { MEDIA_FOLDERS, storage } from "../lib/s3";
 
 const MediaRoutes = Router();
 
@@ -15,7 +15,7 @@ MediaRoutes.get("/{*key}", async (req: Request, res: Response, next: NextFunctio
     if (!allowed || key.split("/").includes("..")) {
       return res.status(404).json({ success: false, message: "Not found" });
     }
-    const url = await signedUrl(key);
+    const url = await storage.signedUrl(key);
     // Let browsers reuse the redirect for a while (well under the 1h URL lifetime)
     res.set("Cache-Control", "private, max-age=600");
     res.redirect(302, url);

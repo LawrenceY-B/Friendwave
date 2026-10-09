@@ -12,7 +12,8 @@ const required = (name: string): string => {
 };
 
 const PROD_ENV = process.env.PROD_ENV || "Development";
-const PORT = Number(process.env.PORT) || 3000;
+// 4000, so it doesn't clash with a Next.js dev server on 3000
+const PORT = Number(process.env.PORT) || 4000;
 // Auth0 puts a trailing slash in the token's `iss` claim, so normalise to that
 const issuer = required("ISSUERBASEURL").replace(/\/?$/, "/");
 
@@ -33,4 +34,6 @@ export const environment = {
   AWS_BUCKET: process.env.AWS_BUCKET || "fwstorage-trial",
   // Origin allowed to call the API / socket from a browser, e.g. https://friendwave.app
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || "*",
+  // Requests per minute per IP for /api (images and /health aren't limited)
+  RATE_LIMIT_PER_MINUTE: Number(process.env.RATE_LIMIT_PER_MINUTE) || 300,
 };

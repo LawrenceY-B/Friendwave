@@ -23,7 +23,7 @@ type MediaFolder = (typeof MEDIA_FOLDERS)[number];
 // Uploads a file and returns its S3 key (e.g. "posts/<user>/<uuid>.jpeg").
 // We store the key, not a URL: signed URLs expire, keys don't.
 // Errors are thrown, so the calling controller decides what to send back.
-export const uploadImage = async (
+const uploadImage = async (
   file: Express.Multer.File,
   folder: MediaFolder,
   userId: string
@@ -41,7 +41,7 @@ export const uploadImage = async (
   return key;
 };
 
-export const deleteImages = async (keys: string[]) => {
+const deleteImages = async (keys: string[]) => {
   // Old documents may still hold full (expired) URLs; only delete real keys.
   const objects = keys
     .filter((key) => !key.startsWith("http"))
@@ -55,16 +55,20 @@ export const deleteImages = async (keys: string[]) => {
   );
 };
 
-export const signedUrl = (key: string) =>
+const signedUrl = (key: string) =>
   getSignedUrl(
     s3,
     new GetObjectCommand({ Bucket: environment.AWS_BUCKET, Key: key }),
     { expiresIn: 60 * 60 }
   );
 
+// Grouped in one object so tests can swap in fakes (no real S3 calls in tests)
+export const storage = { uploadImage, deleteImages, signedUrl };
+
 // Turns a stored key into the public URL of our media route. Values that are
 // already URLs (e.g. Auth0 profile pictures) are returned unchanged.
-export const mediaUrl = (value?: string) => {
-  if (!value || value.startsWith("http")) return value;
+export const mediaUrl = (value?: string | null): string | null => {
+  if (!value) return null;
+  if (value.startsWith("http")) return value;
   return `${environment.API_URL}/api/media/${value}`;
 };

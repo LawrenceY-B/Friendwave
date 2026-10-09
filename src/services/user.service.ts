@@ -1,45 +1,20 @@
 import joi from "joi";
-import { objectId } from "../lib/validation";
+import { pageQuery } from "../lib/validation";
 
-export const validateFollow = (data: unknown) => {
-  const schema = joi.object({
-    FollowingID: objectId().required(),
-  });
-  return schema.validate(data);
-};
+export const searchQuery = joi.object({
+  search: joi.string().trim().min(1).max(50).required(),
+  ...pageQuery,
+});
 
-export const validateRemoveFollower = (data: unknown) => {
-  const schema = joi.object({
-    FollowerID: objectId().required(),
+export const updateProfileBody = joi
+  .object({
+    name: joi.string().trim().min(1).max(50),
+    username: joi
+      .string()
+      .trim()
+      .min(3)
+      .max(30)
+      .pattern(/^[A-Za-z0-9._]+$/)
+      .messages({ "string.pattern.base": "username may only contain letters, numbers, . and _" }),
+    bio: joi.string().allow("").max(150),
   });
-  return schema.validate(data);
-};
-
-export const validateBio = (data: unknown) => {
-  const schema = joi.object({
-    Bio: joi.string().min(3).max(150).required(),
-  });
-  return schema.validate(data);
-};
-export const validateProfile = (data: unknown) => {
-  const schema = joi.object({
-    Name: joi.string().min(3),
-    Username: joi.string().min(3),
-    Bio: joi.string().allow("").max(150),
-  });
-  return schema.validate(data);
-};
-
-export const validateUserID = (data: unknown) => {
-  const schema = joi.object({
-    userID: objectId().required(),
-  });
-  return schema.validate(data);
-};
-
-export const validateSearch = (data: unknown) => {
-  const schema = joi.object({
-    username: joi.string().trim().min(1).max(50).required(),
-  });
-  return schema.validate(data);
-};

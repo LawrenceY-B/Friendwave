@@ -1,98 +1,71 @@
+import { Request, Response } from "express";
+import { randomUUID } from "crypto";
 import Post from "../models/post.model";
 import Stories from "../models/stories.model";
-import User from "../models/user.model";
-import { randomUUID } from "crypto";
-import { NextFunction, Request, Response } from "express";
-import { validateStory, validateStoryID } from "../services/story.service";
+import Following from "../models/following.model";
+import { toUserSummary } from "../lib/dto";
+import { notFound, send } from "../lib/http";
+import { buildPosts, POST_AUTHOR } from "../services/post.service";
 
-const storyPopulate = {
-  path: "postId",
-  populate: {
-    path: "userId",
-    select: "Username ProfileUrl postId",
-  },
+const STORY_POPULATE = { path: "postId", populate: POST_AUTHOR };
+
+// Shapes stories for the API: one entry per author, oldest story first
+// (the order a story viewer plays them in).
+const groupByAuthor = async (stories: Record<string, any>[], viewerId: string) => {
+  // The post or its author may have been deleted since
+  const live = stories.filter((story) => story.postId && story.userId);
+  const posts = await buildPosts(live.map((story) => story.postId), viewerId);
+  const groups = new Map<string, { author: ReturnType<typeof toUserSummary>; stories: unknown[] }>();
+  live.forEach((story, i) => {
+    const authorId = String(story.userId._id ?? story.userId);
+    if (!groups.has(authorId)) groups.set(authorId, { author: toUserSummary(story.userId), stories: [] });
+    groups.get(authorId)!.stories.push({
+      id: String(story._id),
+      post: posts[i],
+      createdAt: story.createdAt,
+      expiresAt: story.expireAt,
+    });
+  });
+  return [...groups.values()];
 };
 
-export const addtoStory = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const userID = req.user.userID;
-    const { error } = validateStory(req.body);
-    if (error) {
-      return res
-        .status(400)
-        .json({ success: false, message: error.details[0].message });
-    }
-    const { postID } = req.body;
-    if (!(await Post.exists({ postId: postID }))) {
-      return res.status(404).json({ success: false, message: "Post not found" });
-    }
-
-    const story = await Stories.create({
-      userId: userID,
-      postId: postID,
-      storyId: randomUUID(),
-    });
-    const data = await story.populate(storyPopulate);
-
-    await User.updateOne({ _id: userID }, { $push: { Stories: story._id } });
-
-    res.status(200).json({
-      success: true,
-      message: "Story added successfully",
-      data: data,
-    });
-  } catch (error) {
-    next(error);
-  }
+// GET /stories. Live stories from you and the people you follow, yours first.
+export const getStories = async (req: Request, res: Response) => {
+  const me = req.user.userID;
+  const following = await Following.find({ userID: me }).distinct("followingID");
+  const stories = await Stories.find({
+    userId: { $in: [me, ...following] },
+    // MongoDB's TTL cleanup runs about once a minute, so filter expired ones too
+    expireAt: { $gt: new Date() },
+  })
+    .sort({ createdAt: 1 })
+    .populate({ path: "userId", select: "Username Name ProfileUrl" })
+    .populate(STORY_POPULATE)
+    .lean();
+  const groups = await groupByAuthor(stories, me);
+  // Your own stories first, then whoever posted most recently
+  const latest = (g: { stories: any[] }) => +new Date(g.stories[g.stories.length - 1].createdAt);
+  groups.sort((a, b) => (a.author?.id === me ? -1 : b.author?.id === me ? 1 : latest(b) - latest(a)));
+  send(res, groups);
 };
 
-export const deleteStory = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { error } = validateStoryID(req.body);
-    if (error) {
-      return res
-        .status(400)
-        .json({ success: false, message: error.details[0].message });
-    }
-    const user = req.user.userID;
-    const { storyId } = req.body;
-
-    const deleted = await Stories.findOneAndDelete({
-      _id: storyId,
-      userId: user,
-    });
-    if (!deleted) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Story not found" });
-    }
-
-    await User.updateOne({ _id: user }, { $pull: { Stories: deleted._id } });
-    res
-      .status(200)
-      .json({ success: true, message: "Story deleted successfully" });
-  } catch (error) {
-    next(error)
-  }
+// POST /stories  { postId }
+export const createStory = async (req: Request, res: Response) => {
+  const me = req.user.userID;
+  const { postId } = req.body;
+  if (!(await Post.exists({ _id: postId }))) throw notFound("Post");
+  const story = await Stories.create({ userId: me, postId, storyId: randomUUID() });
+  const populated = await Stories.findById(story._id)
+    .populate({ path: "userId", select: "Username Name ProfileUrl" })
+    .populate(STORY_POPULATE)
+    .lean();
+  const [group] = await groupByAuthor([populated!], me);
+  send(res, group.stories[0], 201);
 };
-export const getStory = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const user = req.user.userID;
-        const story = await Stories.find({userId: user}).populate(storyPopulate)
-        if (story.length === 0) {
-            return res.status(404).json({success: false, message: "Story not found"})
-        }
-        res.status(200).json({success: true, message: "Story found", data: story})
 
-    } catch (error) {
-       next(error)
-    }
-}
+// DELETE /stories/:id. Your own stories only.
+export const deleteStory = async (req: Request, res: Response) => {
+  const deleted = await Stories.findOneAndDelete({ _id: String(req.params.id), userId: req.user.userID });
+  if (!deleted) throw notFound("Story");
+  send(res, null);
+};
