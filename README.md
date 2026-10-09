@@ -30,7 +30,7 @@ cd friendwave
 3. Install dependencies:
 npm install
 
-4. Create your environment file and fill in the values:
+4. Create your environment file and fill in the values (Auth0 setup: [docs/AUTH.md](docs/AUTH.md)):
 cp .env.example .env
 
 5. Start the development server (reloads on changes):
@@ -38,6 +38,15 @@ npm run dev
 
 
 Access Friend Wave at `http://localhost:3000`.
+
+### Testing as a user
+
+```
+TOKEN=$(npm run -s token -- alice@test.com 'Str0ng-pass!' --signup)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/users/getUser
+```
+
+See [docs/AUTH.md](docs/AUTH.md) for the one-time Auth0 setup this needs.
 
 ### Production build
 
@@ -51,7 +60,7 @@ See [docs/CHANGES.md](docs/CHANGES.md) for the October 2026 upgrade notes, clien
 ## Work Done
 
 - Feature 1: Follow and Unfollow ✅
-- Feature 2: User Authentication (Auth0 and jwt) ✅
+- Feature 2: User Authentication (Auth0 access tokens) ✅
 - Feature 3: Add Posts ✅
 - Feature 4: Comments ✅
 - Feature 5: Stories ✅

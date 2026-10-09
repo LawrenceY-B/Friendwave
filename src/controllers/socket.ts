@@ -1,14 +1,12 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
-import jwt from "jsonwebtoken";
-import { environment } from "../environments/endpoints.config";
-import { TokenPayload } from "../middleware/isAuthorized";
+import { authenticate } from "../services/auth.service";
 import Message from "../models/message.model";
 import { findChatForMember, validateMessage } from "../services/chat.service";
 import Logger from "../lib/logger";
 
 type Ack = (response: { success: boolean; message: string; data?: unknown }) => void;
 
-// Clients connect with the same JWT they use for the REST API:
+// Clients connect with the same Auth0 access token they use for the REST API:
 //   io(API_URL, { auth: { token } })
 export default class SocketManager {
   private io: SocketIOServer;
@@ -22,11 +20,10 @@ export default class SocketManager {
   // Runs once per connection, before "connection". Rejecting here means
   // nobody can connect (or claim to be another user) without a valid token.
   private setupAuth(): void {
-    this.io.use((socket, next) => {
+    this.io.use(async (socket, next) => {
       try {
-        const token = socket.handshake.auth?.token;
-        const payload = jwt.verify(token, environment.JWTKEY) as TokenPayload;
-        socket.data.userId = String(payload.userID);
+        const user = await authenticate(String(socket.handshake.auth?.token));
+        socket.data.userId = user.userID;
         next();
       } catch {
         next(new Error("Unauthorized"));

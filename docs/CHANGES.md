@@ -111,7 +111,7 @@ Chat membership is checked in one place (`services/chat.service.ts#findChatForMe
 the REST endpoints and the socket use it.
 
 The same idea applies to the socket: it used to trust `socket.on("addUser", { userId })`, so anyone
-could claim to be any user and receive their messages. Now the JWT is verified when the socket
+could claim to be any user and receive their messages. Now the access token is verified when the socket
 connects (`io.use(...)`), and the user id comes from the token.
 
 ## 6. Don't return private fields of *other* users
@@ -224,7 +224,7 @@ future, so stories lived **48h**. It's now `expires: 0`.
 post's permanent `imageUrl`, so every image broke after 15 minutes.
 
 Now the database stores the **S3 key** (`posts/<user>/<uuid>.jpeg`). A Mongoose getter turns it into
-`<AUTH0BASEURL>/api/media/<key>`, and that route redirects to a fresh signed URL
+`<API_URL>/api/media/<key>`, and that route redirects to a fresh signed URL
 (`routes/media.routes.ts`). The bucket stays private.
 
 Two upload bugs were also fixed. Keys used `Date.now()`, so several images uploaded in the same millisecond
@@ -247,12 +247,21 @@ one `isDevelopment` flag.
 The server also used to start listening *before* the database connected, and a failed connection was only logged.
 Now it connects first and exits if the connection fails, so Render will show the failure clearly.
 
-## 17. JWTs can't be revoked
+## 17. Let the identity provider own login (switched to Auth0 access tokens)
 
-`Logout` signed a new token with `exp: 0` and returned it. That does nothing to the old token, which
-stays valid until it expires (7 days). It also responded twice (`res.oidc.logout()` already
-redirects). Now `/logout` only ends the Auth0 session, and **the client must delete its stored token**.
-If you need real server-side logout later, use short-lived tokens with refresh tokens, or a denylist.
+The old flow was `/api/login`: the browser was sent to Auth0, came back to the API, and the API then
+signed **its own** JWT with `JWTKEY` and showed it as a JSON page. That had three problems:
+
+- A separate frontend (React, mobile) had no clean way to read a token shown on the API's own domain.
+- The API had to guard two extra secrets (`JWTKEY`, `AUTH0SECRET`). When they leaked, it had to rotate them.
+- Logout couldn't work. The old `Logout` signed a new token with `exp: 0`, which does nothing to the
+  real token (valid for 7 days), and it also responded twice.
+
+Now the frontend logs in with Auth0 directly, and the API only **verifies** Auth0's access tokens with
+Auth0's public keys (RS256). The API holds no signing secret at all. New users are created
+automatically on their first request. See [AUTH.md](AUTH.md) for how it works and how to test it.
+
+Lesson: don't build your own token system on top of an identity provider unless you need to.
 
 ## 18. Smaller things
 
@@ -270,33 +279,40 @@ If you need real server-side logout later, use short-lived tokens with refresh t
 
 | What | Before | After |
 |---|---|---|
-| Socket connect | `io(url)` then `emit("addUser", { userId })` | `io(url, { auth: { token } })`; no `addUser` |
+| Login | browser visits `/api/login`, gets the API's own JWT | frontend logs in with an Auth0 SDK and sends the **Auth0 access token** (see [AUTH.md](AUTH.md)) |
+| Socket connect | `io(url)` then `emit("addUser", { userId })` | `io(url, { auth: { token } })` with the Auth0 access token; no `addUser` |
 | Socket send | `emit("privateMessage", { userId, message })` | `emit("privateMessage", { chatId, message }, ack)` |
 | Socket receive | `{ senderSocketId, message }` | the saved Message document (`_id, chatId, senderId, message, …`) |
 | `/api/messages/*` `success` | strings `"true"`/`"false"` (**both truthy!**) | booleans |
 | Message/chat not found, not yours | 400 | 404 |
-| `/api/logout` | JSON `{ token }` | redirect to Auth0 logout; client deletes its token |
+| `/api/login`, `/api/logout` | existed | removed; the Auth0 SDK handles both; the first API call creates the account |
 | `searchUser`, `getuserprofile` (others) | included `Email`, `Auth0ID` | not included |
 | `newpost` | worked with no images (then crashed) | 400 unless at least 1 image |
 | Saving an already saved post | hung | 400 `Post already saved` |
-| Image URLs | expiring S3 links | `<AUTH0BASEURL>/api/media/...` (stable) |
+| Image URLs | expiring S3 links | `<API_URL>/api/media/...` (stable) |
 
 ## One-off database steps
 
-1. **Story TTL index.** MongoDB won't change an existing index's options. Drop it once, then
-   restart the app, and Mongoose recreates it with the new setting:
+1. **Story TTL index.** MongoDB won't change an existing index's options, so it had to be dropped
+   and recreated once (✅ done on the real database on 2026-10-09):
    ```js
    // mongosh
    db.stories.dropIndex("expireAt_1")
+   db.stories.createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 })
    ```
 2. **Old images.** Posts created before this change hold expired signed URLs. They are returned
    as-is (they were already broken). Re-upload them, or write a small migration that extracts the
    key from the old URL.
 
-## New / optional environment variables
+## Environment variables
+
+Removed: `JWTKEY`, `AUTH0SECRET`, `AUTH0CLIENTID`, `AUTH0BASEURL`.
 
 | Variable | Default | Purpose |
 |---|---|---|
+| `AUTH0_AUDIENCE` | required | Identifier of the Auth0 API (see [AUTH.md](AUTH.md)) |
+| `API_URL` | `http://localhost:<PORT>` | Public URL of this API, used in image links |
+| `AUTH0_TEST_CLIENT_ID` / `_SECRET` | none | Dev only, for `npm run token` |
 | `AWS_BUCKET` | `fwstorage-trial` | S3 bucket |
 | `AWS_REGION` | `eu-west-2` | S3 region |
 | `CLIENT_ORIGIN` | `*` | Allowed browser origin for the API and socket.io. Set it to your frontend's URL in production |
@@ -305,8 +321,8 @@ If you need real server-side logout later, use short-lived tokens with refresh t
 
 - New **Web Service** from the GitHub repo.
 - Build command: `npm ci && npm run build`. Start command: `npm start`.
-- Add every variable from `.env` in the Render dashboard. Render sets `PORT` itself. Set
-  `AUTH0BASEURL` to the Render URL, and add `<url>/callback` to the Auth0 app's allowed callback URLs.
+- Add the variables from `.env` in the Render dashboard, **except** the `AUTH0_TEST_*` ones. Render sets
+  `PORT` itself. Set `API_URL` to the Render URL, and `CLIENT_ORIGIN` to your frontend's URL.
 - `PROD_ENV=Production` turns off debug logs and hides error details.
 - Render runs a long-lived server, so socket.io and the cron jobs work there (unlike Vercel's serverless functions).
   On the free plan the service sleeps when idle, and cron jobs don't run while it's asleep.

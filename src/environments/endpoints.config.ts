@@ -12,17 +12,21 @@ const required = (name: string): string => {
 };
 
 const PROD_ENV = process.env.PROD_ENV || "Development";
+const PORT = Number(process.env.PORT) || 3000;
+// Auth0 puts a trailing slash in the token's `iss` claim, so normalise to that
+const issuer = required("ISSUERBASEURL").replace(/\/?$/, "/");
 
 export const environment = {
-  PORT: Number(process.env.PORT) || 3000,
+  PORT,
   DBUrl: required("MONGODBURL"),
   PROD_ENV,
   isDevelopment: PROD_ENV.toLowerCase() === "development",
-  AUTH0SECRET: required("AUTH0SECRET"),
-  AUTH0BASEURL: required("AUTH0BASEURL"),
-  AUTH0CLIENTID: required("AUTH0CLIENTID"),
-  ISSUERBASEURL: required("ISSUERBASEURL"),
-  JWTKEY: required("JWTKEY"),
+  // Public URL of this API (used to build image links), e.g. https://friendwave.onrender.com
+  API_URL: (process.env.API_URL || `http://localhost:${PORT}`).replace(/\/$/, ""),
+  // Your Auth0 tenant, e.g. https://dev-xxxx.us.auth0.com/
+  AUTH0_ISSUER: issuer,
+  // The "Identifier" of the API you created in Auth0 (Applications → APIs)
+  AUTH0_AUDIENCE: required("AUTH0_AUDIENCE"),
   AWS_ACCESS_KEY: required("AWS_ACCESS_KEY"),
   AWS_SECRET_ACCESS_KEY: required("AWS_SECRET_ACCESS_KEY"),
   AWS_REGION: process.env.AWS_REGION || "eu-west-2",

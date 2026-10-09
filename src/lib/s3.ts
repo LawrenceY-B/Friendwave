@@ -66,5 +66,5 @@ export const signedUrl = (key: string) =>
 // already URLs (e.g. Auth0 profile pictures) are returned unchanged.
 export const mediaUrl = (value?: string) => {
   if (!value || value.startsWith("http")) return value;
-  return `${environment.AUTH0BASEURL}/api/media/${value}`;
+  return `${environment.API_URL}/api/media/${value}`;
 };

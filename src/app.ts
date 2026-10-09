@@ -4,9 +4,7 @@ import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 
 import { DB_Connection } from "./database/db";
-import { auth } from "express-openid-connect";
 import ErrorHandler from "./middleware/errorhandler";
-import Authroutes from "./routes/auth.routes";
 import UserRoutes from "./routes/user.routes";
 import PostRoutes from "./routes/post.routes";
 import StoryRoutes from "./routes/story.routes";
@@ -23,14 +21,6 @@ const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
   cors: { origin: environment.CLIENT_ORIGIN },
 });
-const config = {
-  authRequired: false,
-  auth0Logout: true,
-  secret: environment.AUTH0SECRET,
-  baseURL: environment.AUTH0BASEURL,
-  clientID: environment.AUTH0CLIENTID,
-  issuerBaseURL: environment.ISSUERBASEURL,
-};
 app
   // Middleware runs in the order it is registered, so the request logger goes first
   .use(morganMiddleware)
@@ -49,8 +39,6 @@ app
     next();
   })
   .use(express.json())
-  .use(auth(config))
-  .use("/api", Authroutes)
   .use("/api/media", MediaRoutes)
   .use("/api/users", UserRoutes)
   .use("/api/posts", PostRoutes)
@@ -58,7 +46,6 @@ app
   .use("/api/chat", ChatRoutes)
   .use("/api/messages", MessageRoutes);
 
-// auth router attaches /login, /logout, and /callback routes to the baseURL
 app.all("/{*splat}", (req: Request, res: Response) => {
   res.status(404).json({ message: "Page Not Found 😔" });
   Logger.http(`${req.method} - ${req.url} - ${req.ip} Page Not Found 🔦🔦`);

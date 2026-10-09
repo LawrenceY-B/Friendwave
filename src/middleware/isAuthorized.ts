@@ -1,24 +1,18 @@
 import { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
-import { environment } from "../environments/endpoints.config";
+import { errors } from "jose";
+import { authenticate, AuthUser } from "../services/auth.service";
 import Logger from "../lib/logger";
-
-export interface TokenPayload {
-  Auth0id: string;
-  userID: string;
-  userMail: string;
-  iat: number;
-  exp: number;
-}
 
 //this module extends Request to create a new object, in this case, the user object
 declare module "express-serve-static-core" {
   interface Request {
-    user: TokenPayload;
+    user: AuthUser;
   }
 }
 
-export const verifyToken = (
+// Expects "Authorization: Bearer <Auth0 access token>". The first request from a
+// new Auth0 user creates their Friendwave account automatically.
+export const verifyToken = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -30,16 +24,19 @@ export const verifyToken = (
     return res.status(401).json({ success: false, message: "Invalid Authorization header" });
   }
 
-  const token = Authorization.split(" ")[1];
   try {
-    // jwt.verify throws if the signature is wrong OR the token has expired,
-    // so no separate expiry check is needed.
-    req.user = jwt.verify(token, environment.JWTKEY) as TokenPayload;
-    next();
+    req.user = await authenticate(Authorization.slice("Bearer ".length));
   } catch (error: any) {
-    Logger.warn(`Rejected token: ${error.message}`);
-    const message =
-      error instanceof jwt.TokenExpiredError ? "Token has expired" : "Invalid access token";
-    return res.status(401).json({ success: false, message });
+    // Problems with the token itself are the client's fault (401). A timeout while
+    // downloading Auth0's keys, or a database error, is ours: pass it on.
+    if (error instanceof errors.JOSEError && !(error instanceof errors.JWKSTimeout)) {
+      Logger.warn(`Rejected token: ${error.code}`);
+      const message =
+        error instanceof errors.JWTExpired ? "Token has expired" : "Invalid access token";
+      return res.status(401).json({ success: false, message });
+    }
+    return next(error);
   }
+  // Outside the try, so errors from later handlers aren't treated as token errors
+  next();
 };
