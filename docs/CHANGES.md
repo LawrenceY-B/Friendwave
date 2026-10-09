@@ -308,9 +308,15 @@ catches that error (`E11000`) and retries with another name. The index uses a ca
    db.stories.dropIndex("expireAt_1")
    db.stories.createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 })
    ```
-2. **Old images.** Posts created before this change hold expired signed URLs. They are returned
-   as-is (they were already broken). Re-upload them, or write a small migration that extracts the
-   key from the old URL.
+2. **Old data repaired** (✅ done on 2026-10-09 with `scripts/cleanup-data.mjs`). The script:
+   - Copied the old images to clean S3 keys with the correct content type, and stored the keys,
+     so the expired links now work again through `/api/media/…`.
+   - Moved a conversation that had been saved in the wrong chat.
+   - Removed likes and comment ids pointing at deleted things.
+   - Rebuilt every user's Posts/Followers/Followings/SavedPosts/Stories lists from the collections.
+
+   It's safe to run again any time: it does a dry run first, writes a backup, and makes no change when
+   nothing is broken.
 
 ## Environment variables
 
