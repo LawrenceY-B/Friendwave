@@ -19,7 +19,7 @@ export const storycheck = async () => {
             const updatePost = await User.findOneAndUpdate(
               { UserID: user.UserID },
               { $pull: { Stories: story } },
-              { new: true }
+              { returnDocument: "after" }
             );
             Logger.info(updatePost);
             if (updatePost) {

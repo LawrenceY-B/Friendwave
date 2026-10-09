@@ -1,8 +1,8 @@
-import { Schema } from "mongoose";
+import { Types } from "mongoose";
 
 export interface IStories {
     storyId: string;
-    userId: Schema.Types.ObjectId;
-    postId: Schema.Types.ObjectId;
+    userId: Types.ObjectId;
+    postId: Types.ObjectId;
     expireAt: Date;
 }

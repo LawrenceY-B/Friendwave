@@ -1,6 +1,6 @@
-import { Schema } from "mongoose";
+import { Types } from "mongoose";
 export interface IUser{
-UserID:Schema.Types.ObjectId
+UserID:Types.ObjectId
 Auth0ID: string;
 Username: string;
 Name: string;
@@ -19,9 +19,9 @@ Stories: any[];
 
 }
 export interface IFollowing{
-    userID: Schema.Types.ObjectId
-    followingID: Schema.Types.ObjectId
+    userID: Types.ObjectId
+    followingID: Types.ObjectId
 }export interface IFollower{
-    userID:Schema.Types.ObjectId
-    followerID: Schema.Types.ObjectId
+    userID:Types.ObjectId
+    followerID: Types.ObjectId
 }

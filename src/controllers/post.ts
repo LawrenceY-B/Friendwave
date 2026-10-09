@@ -10,8 +10,8 @@ import {
 } from "../services/post.service";
 import User from "../models/user.model";
 import SavedPost from "../models/savedpost.model";
-import { v4 as uui4 } from "uuid";
-import { Schema } from "mongoose";
+import { randomUUID } from "crypto";
+import { Types } from "mongoose";
 import Comment from "../models/comment.model";
 import { IReplies } from "../interfaces/post.interface";
 import Logger from "../lib/logger";
@@ -47,7 +47,7 @@ export const newPost = async (
     const updatedPost = await Post.findOneAndUpdate(
       { _id: post._id },
       { $set: { postId: post._id } },
-      { new: true }
+      { returnDocument: "after" }
     );
     const updateUser = await User.findById(userId);
     updateUser?.Posts.push(updatedPost?.postId);
@@ -63,7 +63,7 @@ export const newPost = async (
 //test this 👇🏽👇🏽👇🏽👇🏽
 export const getPost = async(req:Request, res:Response, next:NextFunction)=>{
 try {
-  const postId = req.params.postId;
+  const postId = String(req.params.postId);
   const post = await Post.findOne({postId:postId})
   if(!post){
     return res.status(404).json({success:false, message:"Post not found"})
@@ -130,13 +130,13 @@ export const addLikes = async (
       res.status(404).json({ success: false, message: "Post not found" });
     }
     if (isExisting) {
-      if (isExisting.likes.includes(userID)) {
+      if (isExisting.likes.some((id) => id.equals(userID))) {
         return res.status(400).json({
           success: false,
           message: "You have already liked this post",
         });
       }
-      isExisting?.likes.push(userID);
+      isExisting.likes.push(new Types.ObjectId(userID));
       isExisting?.save();
     }
 
@@ -164,14 +164,14 @@ export const unlike = async (
         .status(404)
         .json({ success: false, message: "Post not found" });
     }
-    if (!isExisting.likes.includes(userID)) {
+    if (!isExisting.likes.some((id) => id.equals(userID))) {
       return res.status(400).json({
         success: false,
         message: "You have not liked this post",
       });
     }
 
-    const updatedLikes = isExisting.likes.filter((like) => like != userID);
+    const updatedLikes = isExisting.likes.filter((like) => !like.equals(userID));
 
     isExisting.likes = updatedLikes;
 
@@ -296,7 +296,7 @@ export const createComment = async (
     const updatedPost = await Post.findOneAndUpdate(
       { postId: postID },
       { $push: { comments: newComment._id } },
-      { new: true }
+      { returnDocument: "after" }
     );
     if (!updatedPost) {
       return res
@@ -395,7 +395,7 @@ export const replyComment = async (
         .json({ success: false, message: "Comment not found" });
     }
     const newReply: IReplies = {
-      replyId: uui4(),
+      replyId: randomUUID(),
       userId: user,
       commentId: commentID,
       reply: message,

@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ quiet: true });
 export const environment = {
   PORT: Number(process.env.PORT) || 3000,
   DBUrl: String(process.env.MONGODBURL),

@@ -1,7 +1,7 @@
 import Post from "../models/post.model";
 import Stories from "../models/stories.model";
 import User from "../models/user.model";
-import { v4 as uiv4 } from "uuid";
+import { randomUUID } from "crypto";
 import { NextFunction, Request, Response } from "express";
 import { validateStory } from "../services/story.service";
 import Logger from "../lib/logger";
@@ -23,7 +23,7 @@ export const addtoStory = async (
     const story = new Stories({
       userId: userID,
       postId: postID,
-      storyId: uiv4(),
+      storyId: randomUUID(),
     });
     const result = await story.save();
     const data = await result.populate({
@@ -37,7 +37,7 @@ export const addtoStory = async (
     const updatedPost = await User.findOneAndUpdate(
       { UserID: userID },
       { $push: { Stories: result._id } },
-      { new: true }
+      { returnDocument: "after" }
     );
     // let task = cron.schedule("*/30 * * * * *", async () => {
     //   let trial = await Stories.findOne({ _id: result._id });
@@ -45,7 +45,7 @@ export const addtoStory = async (
     //     const updatePost = await User.findOneAndUpdate(
     //       { UserID: userID },
     //       { $pull: { Stories: result._id } },
-    //       { new: true }
+    //       { returnDocument: "after" }
     //     );
     //     console.log(updatePost);
     //     if (updatePost) {
@@ -97,7 +97,7 @@ export const deleteStory = async (
         const updatePost = await User.findOneAndUpdate(
           { UserID: user },
           { $pull: { Stories: deletedId } },
-          { new: true }
+          { returnDocument: "after" }
         );
         if (updatePost) {
           return res

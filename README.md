@@ -16,7 +16,7 @@ Friend Wave is built using the following technologies:
 
 ### Prerequisites
 
-- Node.js
+- Node.js 22 or newer
 - npm
 
 ### Installation

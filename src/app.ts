@@ -52,7 +52,7 @@ app
   .use("/api/messages", MessageRoutes);
 
 // auth router attaches /login, /logout, and /callback routes to the baseURL
-app.all("*", (req: Request, res: Response) => {
+app.all("/{*splat}", (req: Request, res: Response) => {
   res.status(404).json({ message: "Page Not Found 😔" });
   Logger.http(`${req.method} - ${req.url} - ${req.ip} Page Not Found 🔦🔦`);
 });

@@ -53,7 +53,7 @@ export const newFollow = async (
             followerID: UserID,
           },
           { userID: FollowingID, followerID: UserID },
-          { new: true, upsert: true }
+          { returnDocument: "after", upsert: true }
         );
         const addFollowers = await User.findById(FollowingID);
         addFollowers?.Followers.push(followers?.followerID);
@@ -232,7 +232,7 @@ export const AddBio = async (
     const user = await User.findByIdAndUpdate(
       UserID,
       { Bio: Bio },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     );
     if (!user)
       res.status(404).json({ success: false, message: "User not found." });
@@ -253,7 +253,7 @@ export const deleteBio = async (
     const user = await User.findOneAndUpdate(
       { UserID: UserID },
       { Bio: "" },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     );
     if (!user)
       res.status(404).json({ success: false, message: "User not found." });
@@ -310,7 +310,7 @@ export const editProfile = async (
     const user = await User.findByIdAndUpdate(
       UserID,
       { Name: Name, Username: Username, Bio: Bio, ProfileUrl: ImgUrl },
-      { new: true, upsert: true }
+      { returnDocument: "after", upsert: true }
     );
     if (!user)
       res.status(404).json({ success: false, message: "User not found" });
@@ -327,7 +327,7 @@ export const getotherUser = async (
   next: NextFunction
 ) => {
   try {
-    const { userID } = req.query;
+    const userID = String(req.query.userID);
     const userData = await User.find({ UserID: userID })
       .select("-_id -__v -EmailVerified")
       .populate({

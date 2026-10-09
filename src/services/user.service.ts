@@ -8,7 +8,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextFunction, Request } from "express";
 import joi from "joi";
-import { Schema } from "mongoose";
+
 import { environment } from "../environments/endpoints.config";
 
 export const validateFollow = (person: Request) => {
@@ -35,7 +35,7 @@ export const validateProfile = (profile: Request) => {
 export const ImageUpload = async (
   images: Express.Multer.File,
   next: NextFunction,
-  userid: Schema.Types.ObjectId
+  userid: string
 ) => {
   try {
     let MIMEtype = images.mimetype;

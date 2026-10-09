@@ -6,7 +6,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextFunction, Request } from "express";
 import joi from "joi";
-import { Schema } from "mongoose";
+
 import { environment } from "../environments/endpoints.config";
 
 export const validatePost = (caption: Request) => {
@@ -47,7 +47,7 @@ export const validateComment = (caption: Request) => {
 export const ImageUpload = async (
     images: Express.Multer.File[],
     next: NextFunction,
-    userid: Schema.Types.ObjectId
+    userid: string
   ) => {
     try {
       const awsS3 = new S3Client({

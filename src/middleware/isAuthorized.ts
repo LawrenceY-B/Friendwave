@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { Schema } from "mongoose";
 import { environment } from "../environments/endpoints.config";
 import Logger from "../lib/logger";
 
@@ -10,7 +9,7 @@ declare module "express-serve-static-core" {
     user: {
       //    Properties of token payload
       Auth0id: string;
-      userID: Schema.Types.ObjectId;
+      userID: string;
       userMail: string;
       iat: number;
       exp: number;

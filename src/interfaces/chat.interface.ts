@@ -1,11 +1,11 @@
-import { Schema } from "mongoose";
+import { Types } from "mongoose";
 
 export interface IChats{
-    members:Schema.Types.ObjectId[];
+    members:Types.ObjectId[];
 }
 export interface IMessage{
     chatId:any;
-    senderId:Schema.Types.ObjectId;
+    senderId:Types.ObjectId;
     message:string;
     dateTime:Date;
 }
