@@ -1,26 +1,28 @@
 import { Request, Response, NextFunction } from "express";
 import Message from "../models/message.model";
-import Logger from "../lib/logger";
-import { IMessage } from "../interfaces/chat.interface";
+import { findChatForMember, validateMessage } from "../services/chat.service";
 
-export const newMessage = (req: Request, res: Response, next: NextFunction) => {
+export const newMessage = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { message } = req.body;
+    const { error } = validateMessage(req.body);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     const senderId = req.user.userID;
-    const chatId = req.params.id;
-    const newMessage = {
-      message,
+    const chatId = String(req.params.id);
+    if (!(await findChatForMember(chatId, senderId))) {
+      return res.status(404).json({ success: false, message: "Chat not found" });
+    }
+
+    // Without `await`, save() returns a Promise, which is always truthy,
+    // and any database error would be lost.
+    const sent = await Message.create({
+      message: req.body.message,
       senderId,
       chatId,
-    };
-
-    const sendMessage = new Message({ ...newMessage, dateTime: Date.now()
+      dateTime: Date.now(),
     });
-    let isSaved = sendMessage.save();
-    if (!isSaved) {
-      res.status(400).json({success:"false", message: "Message not sent" });
-    }
-    res.status(200).json({success:"true", message: "Message Sent" });
+    res.status(200).json({ success: true, message: "Message Sent", data: sent });
   } catch (error) {
     next(error);
   }
@@ -32,13 +34,13 @@ export const getMessages = async (
     next:NextFunction
 )=>{
     try {
-        const chatId = req.params.id;
-        const getMessage = await Message.find({chatId: chatId})
-        if(!getMessage){
-            res.status(400).json({success:"false", message: "No Messages" });
+        const chatId = String(req.params.id);
+        if (!(await findChatForMember(chatId, req.user.userID))) {
+            return res.status(404).json({ success: false, message: "Chat not found" });
         }
-        res.status(200).json({success:"true", message: "Messages Found", data:getMessage });
-        
+        const getMessage = await Message.find({chatId: chatId}).sort({ createdAt: 1 })
+        res.status(200).json({success: true, message: "Messages Found", data:getMessage });
+
     } catch (error) {
         next(error)
     }
@@ -51,13 +53,14 @@ export const deleteMessage = async (
 ) => {
     try {
         const {messageId} = req.params;
-        const deleteMessage = await Message.findByIdAndDelete(messageId);
-        if(!deleteMessage){
-            res.status(400).json({success:"false", message: "Message not found" });
+        // Matching on senderId means you can only delete your own messages
+        const deleted = await Message.findOneAndDelete({ _id: messageId, senderId: req.user.userID });
+        if(!deleted){
+            return res.status(404).json({success: false, message: "Message not found" });
         }
-        res.status(200).json({success:"true", message: "Message deleted" });
+        res.status(200).json({success: true, message: "Message deleted" });
     } catch (error) {
-       next(error); 
+       next(error);
     }
 }
 
@@ -67,13 +70,19 @@ export const editMessage = async (
     next:NextFunction
 ) => {
     try {
-        const {messageId} = req.params;
-        const {message} = req.body;
-        const editMessage = await Message.findByIdAndUpdate(messageId, {message: message});
-        if(!editMessage){
-            res.status(400).json({success:"false", message: "Message not found" });
+        const { error } = validateMessage(req.body);
+        if (error) {
+            return res.status(400).json({ success: false, message: error.message });
         }
-        res.status(200).json({success:"true", message: "Message edited" });
+        const {messageId} = req.params;
+        const edited = await Message.findOneAndUpdate(
+            { _id: messageId, senderId: req.user.userID },
+            { message: req.body.message }
+        );
+        if(!edited){
+            return res.status(404).json({success: false, message: "Message not found" });
+        }
+        res.status(200).json({success: true, message: "Message edited" });
     } catch (error) {
         next(error);
     }

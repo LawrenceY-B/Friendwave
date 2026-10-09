@@ -15,10 +15,7 @@ const stream: StreamOptions = {
 // This method is not really needed here since 
 // we already told to the logger that it should print
 // only warning and error messages in production.
-const skip = () => {
-  const env = `${environment.PROD_ENV}` || "Development";
-  return env !== "Development";
-};
+const skip = () => !environment.isDevelopment;
 
 // Build the morgan middleware
 const morganMiddleware = morgan(

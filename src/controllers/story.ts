@@ -3,8 +3,15 @@ import Stories from "../models/stories.model";
 import User from "../models/user.model";
 import { randomUUID } from "crypto";
 import { NextFunction, Request, Response } from "express";
-import { validateStory } from "../services/story.service";
-import Logger from "../lib/logger";
+import { validateStory, validateStoryID } from "../services/story.service";
+
+const storyPopulate = {
+  path: "postId",
+  populate: {
+    path: "userId",
+    select: "Username ProfileUrl postId",
+  },
+};
 
 export const addtoStory = async (
   req: Request,
@@ -20,51 +27,24 @@ export const addtoStory = async (
         .json({ success: false, message: error.details[0].message });
     }
     const { postID } = req.body;
-    const story = new Stories({
+    if (!(await Post.exists({ postId: postID }))) {
+      return res.status(404).json({ success: false, message: "Post not found" });
+    }
+
+    const story = await Stories.create({
       userId: userID,
       postId: postID,
       storyId: randomUUID(),
     });
-    const result = await story.save();
-    const data = await result.populate({
-      path: "postId",
-      populate: {
-        path: "userId",
-        select: "Username ProfileUrl postId",
-      },
-    });
+    const data = await story.populate(storyPopulate);
 
-    const updatedPost = await User.findOneAndUpdate(
-      { UserID: userID },
-      { $push: { Stories: result._id } },
-      { returnDocument: "after" }
-    );
-    // let task = cron.schedule("*/30 * * * * *", async () => {
-    //   let trial = await Stories.findOne({ _id: result._id });
-    //   if (!trial) {
-    //     const updatePost = await User.findOneAndUpdate(
-    //       { UserID: userID },
-    //       { $pull: { Stories: result._id } },
-    //       { returnDocument: "after" }
-    //     );
-    //     console.log(updatePost);
-    //     if (updatePost) {
-    //       task.stop();
-    //       console.log("task ended");
-    //     }
-    //   }
-    // });
-    if (!updatedPost) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Something went wrong" });
-    } else {
-      res.status(200).json({
-        success: true,
-        message: "Story added successfully",
-        data: data,
-      });
-    }
+    await User.updateOne({ _id: userID }, { $push: { Stories: story._id } });
+
+    res.status(200).json({
+      success: true,
+      message: "Story added successfully",
+      data: data,
+    });
   } catch (error) {
     next(error);
   }
@@ -76,36 +56,29 @@ export const deleteStory = async (
   next: NextFunction
 ) => {
   try {
+    const { error } = validateStoryID(req.body);
+    if (error) {
+      return res
+        .status(400)
+        .json({ success: false, message: error.details[0].message });
+    }
     const user = req.user.userID;
     const { storyId } = req.body;
 
-    const deleteStory = await Stories.findOneAndDelete({
+    const deleted = await Stories.findOneAndDelete({
       _id: storyId,
       userId: user,
     });
-
-    if (!deleteStory) {
+    if (!deleted) {
       return res
         .status(404)
         .json({ success: false, message: "Story not found" });
     }
 
-    if (deleteStory) {
-      const deletedId = deleteStory._id;
-      const findUser = await User.findById(user);
-      if (findUser) {
-        const updatePost = await User.findOneAndUpdate(
-          { UserID: user },
-          { $pull: { Stories: deletedId } },
-          { returnDocument: "after" }
-        );
-        if (updatePost) {
-          return res
-            .status(200)
-            .json({ success: true, message: "Story deleted successfully" });
-        }
-      }
-    }
+    await User.updateOne({ _id: user }, { $pull: { Stories: deleted._id } });
+    res
+      .status(200)
+      .json({ success: true, message: "Story deleted successfully" });
   } catch (error) {
     next(error)
   }
@@ -113,20 +86,13 @@ export const deleteStory = async (
 export const getStory = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = req.user.userID;
-        const story = await Stories.find({userId: user}).populate({
-            path: "postId",
-            populate: {
-                path: "userId",
-                select: "Username ProfileUrl postId"
-            }
-        })
-        Logger.info(story);
-        if (!story || story.length === 0) {
+        const story = await Stories.find({userId: user}).populate(storyPopulate)
+        if (story.length === 0) {
             return res.status(404).json({success: false, message: "Story not found"})
         }
         res.status(200).json({success: true, message: "Story found", data: story})
-        
+
     } catch (error) {
-       next(error) 
+       next(error)
     }
 }

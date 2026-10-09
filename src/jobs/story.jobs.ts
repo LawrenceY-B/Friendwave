@@ -1,60 +1,38 @@
 import cron from "node-cron";
-import { NextFunction, Request, Response } from "express";
-import { validateStory } from "../services/story.service";
 import User from "../models/user.model";
 import Stories from "../models/stories.model";
 import Logger from "../lib/logger";
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
 
-export const storycheck = async () => {
-  try {
-    let task = cron.schedule("30 */1 * * *", async () => {
-      Logger.info("task started");
-      const users = await User.find();
-      const singleuser = users.map((user) => {
-        const stories = user.Stories.map(async (story) => {
-          const check = await Stories.findOne({ _id: story });
-          if (!check) {
-            const updatePost = await User.findOneAndUpdate(
-              { UserID: user.UserID },
-              { $pull: { Stories: story } },
-              { returnDocument: "after" }
-            );
-            Logger.info(updatePost);
-            if (updatePost) {
-              //   task.stop();
-              Logger.info("removed story");
-            }
-          }
-        });
-      });
-    });
-  } catch (error: any) {
-    Logger.error(error);
-  }
+// MongoDB's TTL index deletes expired stories, but the ids stay in each
+// user's Stories array. Every hour, pull ids that no longer exist.
+export const storycheck = () => {
+  cron.schedule("30 * * * *", async () => {
+    // The try/catch must be INSIDE the callback: the callback runs later,
+    // long after a try/catch around cron.schedule() has finished.
+    try {
+      const liveStoryIds = await Stories.distinct("_id");
+      const result = await User.updateMany(
+        { Stories: { $elemMatch: { $nin: liveStoryIds } } },
+        { $pull: { Stories: { $nin: liveStoryIds } } }
+      );
+      Logger.info(`Story cleanup: updated ${result.modifiedCount} users`);
+    } catch (error) {
+      Logger.error(error);
+    }
+  });
 };
 
+// Empty the error log once a day, at midnight
 export const logcheck = () => {
-  try {
-    const filePath = path.join(__dirname, "../../logs/error.log");
-    let task = cron.schedule("* */24 * * *", async () => {
-      Logger.info("task started");
-     fs.access(filePath, fs.constants.F_OK, (err) => {
-        if (err) {
-          Logger.error(`File ${filePath} does not exist`);
-          return;
-        }
-        fs.writeFile(filePath, "", (err) => {
-          if (err) {
-            Logger.error(`Error deleting contents of ${filePath}:`, err);
-            return;
-          }
-          Logger.info(`Successfully deleted contents of logs`);
-        });
-      });
-    });
-  } catch (error: any) {
-    Logger.error(error);
-  }
+  const filePath = path.join(__dirname, "../../logs/error.log");
+  cron.schedule("0 0 * * *", async () => {
+    try {
+      await fs.writeFile(filePath, "");
+      Logger.info(`Successfully deleted contents of logs`);
+    } catch (error) {
+      Logger.error(error);
+    }
+  });
 };

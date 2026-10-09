@@ -1,20 +1,22 @@
 import Post from "../models/post.model";
 import { NextFunction, Request, Response } from "express";
 import {
-  ImageUpload,
   validateComment,
   validateCommentID,
+  validateDeleteReply,
   validatePost,
   validatePostID,
   validateReply,
 } from "../services/post.service";
 import User from "../models/user.model";
 import SavedPost from "../models/savedpost.model";
+import Stories from "../models/stories.model";
 import { randomUUID } from "crypto";
-import { Types } from "mongoose";
 import Comment from "../models/comment.model";
 import { IReplies } from "../interfaces/post.interface";
 import Logger from "../lib/logger";
+import { deleteImages, uploadImage } from "../lib/s3";
+import { objectId } from "../lib/validation";
 
 export const newPost = async (
   req: Request,
@@ -25,33 +27,41 @@ export const newPost = async (
     const userId = req.user.userID;
     const { error } = validatePost(req.body);
     if (error) {
-      res.status(400).json({ success: false, message: error.message });
+      return res.status(400).json({ success: false, message: error.message });
     }
     const { caption } = req.body;
 
-    const images = req.files as Express.Multer.File[];
-    const imageUrls = await ImageUpload(images, next, userId);
+    const images = (req.files as Express.Multer.File[] | undefined) ?? [];
+    if (images.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "At least one image is required" });
+    }
+
+    // Upload all images; if any fails, remove the ones that succeeded
+    const uploads = await Promise.allSettled(
+      images.map((image) => uploadImage(image, "posts", userId))
+    );
+    const keys = uploads.flatMap((u) => (u.status === "fulfilled" ? [u.value] : []));
+    const failed = uploads.find((u) => u.status === "rejected");
+    if (failed) {
+      await deleteImages(keys);
+      throw (failed as PromiseRejectedResult).reason;
+    }
 
     const post = new Post({
       userId: userId,
-      imageUrl: imageUrls,
+      imageUrl: keys,
       caption: caption,
       likes: [],
       comments: [],
       dateTime: Date.now(),
-      saved: false,
     });
-
+    // The _id exists before saving, so postId can be set in the same write
+    post.postId = post._id;
     await post.save();
 
-    const updatedPost = await Post.findOneAndUpdate(
-      { _id: post._id },
-      { $set: { postId: post._id } },
-      { returnDocument: "after" }
-    );
-    const updateUser = await User.findById(userId);
-    updateUser?.Posts.push(updatedPost?.postId);
-    updateUser?.save();
+    await User.updateOne({ _id: userId }, { $push: { Posts: post._id } });
 
     return res
       .status(200)
@@ -60,11 +70,14 @@ export const newPost = async (
     next(error);
   }
 };
-//test this 👇🏽👇🏽👇🏽👇🏽
+
 export const getPost = async(req:Request, res:Response, next:NextFunction)=>{
 try {
-  const postId = String(req.params.postId);
-  const post = await Post.findOne({postId:postId})
+  const { error } = objectId().validate(req.params.postId);
+  if (error) {
+    return res.status(400).json({ success: false, message: "Invalid post id" });
+  }
+  const post = await Post.findOne({postId:req.params.postId})
   if(!post){
     return res.status(404).json({success:false, message:"Post not found"})
   }
@@ -82,29 +95,39 @@ export const deletePost = async (
     const userId = req.user.userID;
     const { error } = validatePostID(req.body);
     if (error) {
-      res.status(400).json({ success: false, message: error.message });
+      return res.status(400).json({ success: false, message: error.message });
     }
     const { postID } = req.body;
-    const post = await Post.findById(postID);
-    if (!post)
+    // Matching on userId too means only the owner can delete the post
+    const deleted = await Post.findOneAndDelete({ postId: postID, userId: userId });
+    if (!deleted) {
       return res
         .status(404)
         .json({ success: false, message: "Post not found" });
-    const deletePost = await Post.findOneAndDelete({
-      postId: postID,
-      userId: userId,
-    });
-    if (deletePost) {
-      const deletedpostID = deletePost.postId;
-      const user = await User.findById(userId);
-
-      if (user) {
-        user.Posts = user.Posts.filter(
-          (postId) => postId.toString() !== deletedpostID.toString()
-        );
-        await user.save();
-      }
     }
+
+    // Clean up everything that pointed at this post
+    await User.updateOne({ _id: userId }, { $pull: { Posts: deleted._id } });
+    await Comment.deleteMany({ postId: postID });
+
+    const saved = await SavedPost.find({ postId: postID });
+    if (saved.length > 0) {
+      await SavedPost.deleteMany({ postId: postID });
+      await User.updateMany(
+        {},
+        { $pull: { SavedPosts: { $in: saved.map((s) => s._id.toString()) } } }
+      );
+    }
+
+    const stories = await Stories.find({ postId: postID });
+    if (stories.length > 0) {
+      await Stories.deleteMany({ postId: postID });
+      await User.updateMany({}, { $pull: { Stories: { $in: stories.map((s) => s._id) } } });
+    }
+
+    // Raw stored keys (without the getter that turns them into URLs)
+    const keys: string[] = deleted.get("imageUrl", null, { getters: false });
+    deleteImages(keys).catch((err) => Logger.error(err));
 
     return res
       .status(200)
@@ -122,22 +145,23 @@ export const addLikes = async (
     const userID = req.user.userID;
     const { error } = validatePostID(req.body);
     if (error) {
-      res.status(400).json({ success: false, message: error.message });
+      return res.status(400).json({ success: false, message: error.message });
     }
     const { postID } = req.body;
-    const isExisting = await Post.findOne({ postId: postID });
-    if (!isExisting) {
-      res.status(404).json({ success: false, message: "Post not found" });
+    // One atomic update: MongoDB adds the id only if it isn't there yet.
+    // (Reading, changing in JS, then saving can lose likes when two arrive at once.)
+    const result = await Post.updateOne(
+      { postId: postID },
+      { $addToSet: { likes: userID } }
+    );
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ success: false, message: "Post not found" });
     }
-    if (isExisting) {
-      if (isExisting.likes.some((id) => id.equals(userID))) {
-        return res.status(400).json({
-          success: false,
-          message: "You have already liked this post",
-        });
-      }
-      isExisting.likes.push(new Types.ObjectId(userID));
-      isExisting?.save();
+    if (result.modifiedCount === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already liked this post",
+      });
     }
 
     res.status(200).json({ success: true, message: `Successfully added` });
@@ -154,28 +178,24 @@ export const unlike = async (
     const userID = req.user.userID;
     const { error } = validatePostID(req.body);
     if (error) {
-      res.status(400).json({ success: false, message: error.message });
+      return res.status(400).json({ success: false, message: error.message });
     }
     const { postID } = req.body;
-    const isExisting = await Post.findOne({ postId: postID });
-
-    if (!isExisting) {
+    const result = await Post.updateOne(
+      { postId: postID },
+      { $pull: { likes: userID } }
+    );
+    if (result.matchedCount === 0) {
       return res
         .status(404)
         .json({ success: false, message: "Post not found" });
     }
-    if (!isExisting.likes.some((id) => id.equals(userID))) {
+    if (result.modifiedCount === 0) {
       return res.status(400).json({
         success: false,
         message: "You have not liked this post",
       });
     }
-
-    const updatedLikes = isExisting.likes.filter((like) => !like.equals(userID));
-
-    isExisting.likes = updatedLikes;
-
-    await isExisting.save();
 
     res.status(200).json({ success: true, message: `Successfully unliked` });
   } catch (error) {
@@ -192,35 +212,30 @@ export const AddtoSaved = async (
     const userID = req.user.userID;
     const { error } = validatePostID(req.body);
     if (error) {
-      res.status(400).json({ success: false, message: error.message });
+      return res.status(400).json({ success: false, message: error.message });
     }
     const { postID } = req.body;
 
-    const isSaved = await SavedPost.findOne({ postId: postID, userId: userID });
-    if (!isSaved) {
-      const savedPost = new SavedPost({
-        postId: postID,
-        userId: userID,
-      });
-      await savedPost.save();
-
-      // const filter = { postId: postID, userId: userID };
-      // const update = { saved: true };
-
-      // const result = await Post.findByIdAndUpdate(
-      //   postID , { $set: { saved:true }}
-      // );
-
-      const user = await User.findOne({ UserID: userID });
-      if (user) {
-        user.SavedPosts.push(savedPost._id);
-        await user.save();
-      }
-
-      res
-        .status(200)
-        .json({ success: true, message: "Post saved successfully" });
+    if (!(await Post.exists({ postId: postID }))) {
+      return res.status(404).json({ success: false, message: "Post not found" });
     }
+    const isSaved = await SavedPost.findOne({ postId: postID, userId: userID });
+    if (isSaved) {
+      // Every code path must send a response, or the request hangs
+      return res
+        .status(400)
+        .json({ success: false, message: "Post already saved" });
+    }
+
+    const savedPost = await SavedPost.create({ postId: postID, userId: userID });
+    await User.updateOne(
+      { _id: userID },
+      { $addToSet: { SavedPosts: savedPost._id.toString() } }
+    );
+
+    res
+      .status(200)
+      .json({ success: true, message: "Post saved successfully" });
   } catch (error) {
     next(error);
   }
@@ -235,27 +250,21 @@ export const RemoveFromSaved = async (
     const userID = req.user.userID;
     const { error } = validatePostID(req.body);
     if (error) {
-      res.status(400).json({ success: false, message: error.message });
+      return res.status(400).json({ success: false, message: error.message });
     }
     const { postID } = req.body;
-    const filter = { postId: postID, userId: userID };
-    Logger.info(filter);
 
     const removeSaved = await SavedPost.findOneAndDelete({
       userId: userID,
       postId: postID,
     });
-    Logger.info(removeSaved);
     if (!removeSaved) {
-      res.status(404).json({ success: false, message: "Post not found" });
+      return res.status(404).json({ success: false, message: "Post not found" });
     }
-    const user = await User.findOne({ UserID: userID });
-    if (user) {
-      user.SavedPosts = user.SavedPosts.filter(
-        (post: any) => post.toString() !== removeSaved?._id.toString()
-      );
-      await user.save();
-    }
+    await User.updateOne(
+      { _id: userID },
+      { $pull: { SavedPosts: removeSaved._id.toString() } }
+    );
     return res.status(200).json({
       status: true,
       message: "Post removed from saved",
@@ -264,7 +273,6 @@ export const RemoveFromSaved = async (
     next(error);
   }
 };
-// work on comments here 👇🏽👇🏽👇🏽👇🏽
 
 export const createComment = async (
   req: Request,
@@ -273,36 +281,28 @@ export const createComment = async (
 ) => {
   try {
     const user = req.user.userID;
-    const { postID, message } = req.body;
     const { error } = validateComment(req.body);
     if (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
-    const isExisting = await Post.findOne({ postId: postID });
+    const { postID, message } = req.body;
+    const isExisting = await Post.exists({ postId: postID });
     if (!isExisting) {
       return res
         .status(404)
         .json({ success: false, message: "Post not found" });
     }
 
-    const newComment = new Comment({
+    const newComment = await Comment.create({
       userId: user,
       postId: postID,
       comment: message,
       dateTime: Date.now(),
     });
-    await newComment.save();
-
-    const updatedPost = await Post.findOneAndUpdate(
+    await Post.updateOne(
       { postId: postID },
-      { $push: { comments: newComment._id } },
-      { returnDocument: "after" }
+      { $push: { comments: newComment._id } }
     );
-    if (!updatedPost) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Something went wrong" });
-    }
     res.status(200).json({
       success: true,
       message: "Comment created successfully",
@@ -319,12 +319,12 @@ export const getAllComments = async (
   next: NextFunction
 ) => {
   try {
-    const { postID } = req.body;
     const { error } = validatePostID(req.body);
     if (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
-    const isExisting = await Post.findOne({ postId: postID });
+    const { postID } = req.body;
+    const isExisting = await Post.exists({ postId: postID });
     if (!isExisting) {
       return res
         .status(404)
@@ -332,14 +332,7 @@ export const getAllComments = async (
     }
     const comments = await Comment.find({ postId: postID })
       .select("-postId")
-      .populate({
-        path: "userId",
-        options: {
-          select: "Username ProfileUrl ",
-          sort: { name: -1 },
-          strictPopulate: false,
-        },
-      })
+      .populate({ path: "userId", select: "Username ProfileUrl" })
       .sort({ dateTime: -1 });
 
     res.status(200).json({
@@ -362,13 +355,25 @@ export const deleteComment = async (
     if (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
+    const userID = req.user.userID;
     const { commentId } = req.body;
-    const comment = await Comment.findOneAndDelete({ _id: commentId });
+    const comment = await Comment.findById(commentId);
     if (!comment) {
       return res
         .status(404)
         .json({ success: false, message: "Comment not found" });
     }
+    // Only the comment's author or the post's owner may delete it
+    const post = await Post.findOne({ postId: comment.postId });
+    const isAllowed = comment.userId.equals(userID) || post?.userId.equals(userID);
+    if (!isAllowed) {
+      return res
+        .status(403)
+        .json({ success: false, message: "You can't delete this comment" });
+    }
+
+    await comment.deleteOne();
+    await Post.updateOne({ postId: comment.postId }, { $pull: { comments: comment._id } });
     res
       .status(200)
       .json({ success: true, message: "Comment deleted successfully" });
@@ -382,11 +387,11 @@ export const replyComment = async (
   next: NextFunction
 ) => {
   try {
-    const { commentID, message } = req.body;
     const { error } = validateReply(req.body);
     if (error) {
       return res.status(400).json({ success: false, message: error.message });
     }
+    const { commentID, message } = req.body;
     const user = req.user.userID;
     const comment = await Comment.findById(commentID);
     if (!comment) {
@@ -418,6 +423,10 @@ export const deleteReply = async (
   next: NextFunction
 ) => {
   try {
+    const { error } = validateDeleteReply(req.body);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     const user = req.user.userID;
     const { commentID, replyID } = req.body;
 
@@ -428,17 +437,23 @@ export const deleteReply = async (
         .json({ success: false, message: "Comment not found" });
     }
     const reply = comment.replies.find(
-      (reply: IReplies) => reply.replyId.toString() === replyID.toString()
+      (reply: IReplies) => reply.replyId === replyID
     );
     if (!reply) {
       return res
         .status(404)
         .json({ success: false, message: "Reply not found" });
     }
+    // Only the reply's author or the comment's author may delete it
+    if (String(reply.userId) !== user && !comment.userId.equals(user)) {
+      return res
+        .status(403)
+        .json({ success: false, message: "You can't delete this reply" });
+    }
     comment.replies = comment.replies.filter(
-      (reply: IReplies) => reply.replyId.toString() !== replyID.toString()
+      (reply: IReplies) => reply.replyId !== replyID
     );
-    comment.save();
+    await comment.save();
     res
       .status(200)
       .json({
@@ -450,19 +465,3 @@ export const deleteReply = async (
     next(error);
   }
 };
-
-/*
-
-1. create IG story array
-2. add posts to user stories
-
-
-
-
-*/
-
-// if (user){
-//     const index = user.Posts.indexOf(postId);
-//     user.Posts.splice(index,1);
-//     user.save();
-// }

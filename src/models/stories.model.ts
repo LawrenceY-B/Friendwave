@@ -9,7 +9,9 @@ const StoriesSchema = new Schema<IStories>(
     expireAt: {
       type: Date,
       default: () => Date.now() + 24 * 60 * 60 * 1000, // expires in 24 hours
-      expires: 60 * 60 * 24,
+      // TTL index: MongoDB deletes the story `expires` seconds AFTER expireAt.
+      // expireAt is already 24h ahead, so this must be 0.
+      expires: 0,
     },
   },
   { timestamps: true }

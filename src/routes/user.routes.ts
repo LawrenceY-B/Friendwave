@@ -1,11 +1,9 @@
-import multer from "multer";
 import {Router} from "express";
 import { verifyToken } from "../middleware/isAuthorized";
+import upload from "../middleware/upload";
 import { getFollowers, getFollowing, newFollow, removeFollow, unFollow, AddBio, deleteBio, getUser, editProfile, getotherUser, searchUser } from "../controllers/user";
 
 
-const storage= multer.memoryStorage();
-const upload = multer({storage})
  const UserRoutes= Router();
 //following & unfollowing functions
  UserRoutes.post('/addFollowing',verifyToken,newFollow)
@@ -23,10 +21,8 @@ const upload = multer({storage})
  //Bio & profile
  UserRoutes.post('/addBio',verifyToken, AddBio)
  UserRoutes.delete('/deleteBio',verifyToken, deleteBio)
- UserRoutes.put('/editprofile',upload.single('images'),verifyToken, editProfile)
- 
-
-
+ // verifyToken runs first, so files are only read for logged-in users
+ UserRoutes.put('/editprofile',verifyToken,upload.single('images'), editProfile)
 
 
  export default UserRoutes

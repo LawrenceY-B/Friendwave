@@ -3,49 +3,43 @@ import jwt from "jsonwebtoken";
 import { environment } from "../environments/endpoints.config";
 import Logger from "../lib/logger";
 
+export interface TokenPayload {
+  Auth0id: string;
+  userID: string;
+  userMail: string;
+  iat: number;
+  exp: number;
+}
+
 //this module extends Request to create a new object, in this case, the user object
 declare module "express-serve-static-core" {
   interface Request {
-    user: {
-      //    Properties of token payload
-      Auth0id: string;
-      userID: string;
-      userMail: string;
-      iat: number;
-      exp: number;
-    };
+    user: TokenPayload;
   }
 }
 
-export const verifyToken = async (
+export const verifyToken = (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   const Authorization = req.get("Authorization");
   if (!Authorization || !Authorization.startsWith("Bearer ")) {
-    res.status(401).json({ message: "Invalid Authorization header" });
     Logger.warn("Invalid Authorization header");
+    // `return` stops the function here; without it the code below still runs.
+    return res.status(401).json({ success: false, message: "Invalid Authorization header" });
   }
 
-  const token: string = Authorization!.split(" ")[1];
+  const token = Authorization.split(" ")[1];
   try {
-    const payload: any = jwt.verify(token, environment.JWTKEY || "");
-
-    if (!payload) {
-      res.status(401).json({ message: "Invalid access token" });
-      Logger.warn("Invalid access token");
-    }
-
-    // check expiry
-    if (payload.exp < Date.now() / 1000) {
-      res.status(401).json({ message: "Token has expired" });
-      Logger.warn("Token has expired");
-    }
-    req.user = payload;
+    // jwt.verify throws if the signature is wrong OR the token has expired,
+    // so no separate expiry check is needed.
+    req.user = jwt.verify(token, environment.JWTKEY) as TokenPayload;
     next();
-  } catch (error) {
-    next(error);
-    Logger.warn(error);
+  } catch (error: any) {
+    Logger.warn(`Rejected token: ${error.message}`);
+    const message =
+      error instanceof jwt.TokenExpiredError ? "Token has expired" : "Invalid access token";
+    return res.status(401).json({ success: false, message });
   }
 };

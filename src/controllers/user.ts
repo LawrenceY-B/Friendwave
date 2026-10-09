@@ -2,12 +2,20 @@ import { NextFunction, Request, Response } from "express";
 import User from "../models/user.model";
 import Following from "../models/following.model";
 import {
-  ImageUpload,
   validateBio,
   validateFollow,
   validateProfile,
+  validateRemoveFollower,
+  validateSearch,
+  validateUserID,
 } from "../services/user.service";
 import Follower from "../models/follower.model";
+import { deleteImages, uploadImage } from "../lib/s3";
+import { escapeRegex } from "../lib/validation";
+import Logger from "../lib/logger";
+
+// Fields of another user that are safe to show publicly
+const PUBLIC_USER_FIELDS = "Username ProfileUrl UserID";
 
 export const newFollow = async (
   req: Request,
@@ -28,46 +36,29 @@ export const newFollow = async (
         .status(400)
         .json({ success: false, message: "Can't follow self" });
     }
+    if (!(await User.exists({ _id: FollowingID }))) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
 
     const existingfollow = await Following.findOne({
       userID: UserID,
       followingID: FollowingID,
     });
-    if (!existingfollow) {
-      //follow the new user
-      const following = new Following({
-        userID: UserID,
-        followingID: FollowingID,
-      });
-      await following.save();
-      //move following to the users model
-      const addFollowing = await User.findById(UserID);
-      addFollowing?.Followings.push(following.followingID);
-      await addFollowing!.save();
-
-      //update the other individuals followers list with MongoID
-      try {
-        const followers = await Follower.findOneAndUpdate(
-          {
-            userID: FollowingID,
-            followerID: UserID,
-          },
-          { userID: FollowingID, followerID: UserID },
-          { returnDocument: "after", upsert: true }
-        );
-        const addFollowers = await User.findById(FollowingID);
-        addFollowers?.Followers.push(followers?.followerID);
-        await addFollowers!.save();
-      } catch (error) {
-        next(error);
-      }
-
-      res.status(200).json({ success: true, message: "Following" });
-    } else {
-      res
+    if (existingfollow) {
+      return res
         .status(400)
         .json({ success: false, message: "User has already been added" });
     }
+
+    await Following.create({ userID: UserID, followingID: FollowingID });
+    await Follower.create({ userID: FollowingID, followerID: UserID });
+    // $addToSet only adds the id if it isn't already in the array
+    await User.updateOne({ _id: UserID }, { $addToSet: { Followings: FollowingID } });
+    await User.updateOne({ _id: FollowingID }, { $addToSet: { Followers: UserID } });
+
+    res.status(200).json({ success: true, message: "Following" });
   } catch (error) {
     next(error);
   }
@@ -88,52 +79,19 @@ export const unFollow = async (
     const { FollowingID } = req.body;
     const UserID = req.user.userID;
 
-    // Remove the following from the user's model
     const following = await Following.findOneAndDelete({
       userID: UserID,
       followingID: FollowingID,
     });
-
     if (!following) {
       return res
         .status(404)
         .json({ success: false, message: "User not in following list." });
     }
 
-    const userData = following.userID;
-    const user = await User.findById(userData);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Couldn't find user" });
-    }
-
-    user.Followings = user.Followings.filter(
-      (followingId) => followingId !== FollowingID
-    );
-    await user.save();
-
-    // Remove the follower from the user's model
-    try {
-      const followers = await Follower.findOneAndDelete({
-        userID: FollowingID,
-        followerID: UserID,
-      });
-
-      if (followers) {
-        const userId = followers.userID;
-        const user = await User.findById(userId);
-
-        if (user) {
-          user.Followers = user.Followers.filter(
-            (followerId) => followerId !== UserID
-          );
-          await user.save();
-        }
-      }
-    } catch (error) {
-      next(error);
-    }
+    await Follower.deleteOne({ userID: FollowingID, followerID: UserID });
+    await User.updateOne({ _id: UserID }, { $pull: { Followings: FollowingID } });
+    await User.updateOne({ _id: FollowingID }, { $pull: { Followers: UserID } });
 
     res.status(200).json({ success: true, message: "Not Following" });
   } catch (error) {
@@ -150,14 +108,7 @@ export const getFollowing = async (
     const following = await Following.find({
       userID: req.user.userID,
     })
-      .populate({
-        path: "followingID",
-        options: {
-          select: "Username ProfileUrl UserID", // Exclude fields from the populated document
-          sort: { name: -1 },
-          strictPopulate: false,
-        },
-      })
+      .populate({ path: "followingID", select: PUBLIC_USER_FIELDS })
       .select("-_id -__v");
     res.status(200).json({ success: true, following: following });
   } catch (err: any) {
@@ -174,14 +125,7 @@ export const getFollowers = async (
     const followers = await Follower.find({
       userID: req.user.userID,
     })
-      .populate({
-        path: "followerID",
-        options: {
-          select: "Username ProfileUrl UserID", // Exclude fields from the populated document
-          sort: { name: -1 },
-          strictPopulate: false,
-        },
-      })
+      .populate({ path: "followerID", select: PUBLIC_USER_FIELDS })
       .select("-_id -__v");
     res.status(200).json({ success: true, followers: followers });
   } catch (err: any) {
@@ -194,31 +138,34 @@ export const removeFollow = async (
   next: NextFunction
 ) => {
   try {
+    const { error } = validateRemoveFollower(req.body);
+    if (error) {
+      return res
+        .status(400)
+        .json({ success: false, message: error.details[0].message });
+    }
     const { FollowerID } = req.body;
     const UserID = req.user.userID;
     const follower = await Follower.findOneAndDelete({
       userID: UserID,
       followerID: FollowerID,
     });
-    if (!follower)
-      res
+    if (!follower) {
+      return res
         .status(404)
         .json({ success: false, message: "User not in followers list." });
-    try {
-      const following = await Following.findOneAndDelete({
-        followingID: UserID,
-        userID: FollowerID,
-      });
-    } catch (err) {
-      next(err);
     }
+
+    await Following.deleteOne({ followingID: UserID, userID: FollowerID });
+    await User.updateOne({ _id: UserID }, { $pull: { Followers: FollowerID } });
+    await User.updateOne({ _id: FollowerID }, { $pull: { Followings: UserID } });
 
     res.status(200).json({ success: true, message: "Removed." });
   } catch (error) {
     next(error);
   }
 };
-//find a way to update the id field
+
 export const AddBio = async (
   req: Request,
   res: Response,
@@ -227,16 +174,16 @@ export const AddBio = async (
   try {
     const UserID = req.user.userID;
     const { error } = validateBio(req.body);
-    if (error) res.status(400).json({ success: false, message: error.message });
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     const { Bio } = req.body;
-    const user = await User.findByIdAndUpdate(
-      UserID,
-      { Bio: Bio },
-      { returnDocument: "after", upsert: true }
-    );
-    if (!user)
-      res.status(404).json({ success: false, message: "User not found." });
-    user.save();
+    // No `upsert`: that would create a half-empty user if the id didn't exist.
+    // findByIdAndUpdate already saves, so no extra save() is needed.
+    const user = await User.findByIdAndUpdate(UserID, { Bio: Bio });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
     res.status(200).json({ success: true, message: "Bio Updated" });
   } catch (error) {
     next(error);
@@ -250,19 +197,21 @@ export const deleteBio = async (
 ) => {
   try {
     const UserID = req.user.userID;
-    const user = await User.findOneAndUpdate(
-      { UserID: UserID },
-      { Bio: "" },
-      { returnDocument: "after", upsert: true }
-    );
-    if (!user)
-      res.status(404).json({ success: false, message: "User not found." });
-    user.save();
+    const user = await User.findByIdAndUpdate(UserID, { Bio: "" });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
     res.status(200).json({ success: true, message: "Bio Deleted" });
   } catch (error) {
     next(error);
   }
 };
+
+// Your own profile includes your email; someone else's doesn't
+const findProfile = (userID: string, isOwnProfile: boolean) =>
+  User.find({ UserID: userID })
+    .select(isOwnProfile ? "-_id -__v -EmailVerified" : "-_id -__v -EmailVerified -Email -Auth0ID")
+    .populate({ path: "Posts", select: "-__v -userId" });
 
 export const getUser = async (
   req: Request,
@@ -270,20 +219,12 @@ export const getUser = async (
   next: NextFunction
 ) => {
   try {
-    const UserID = req.user.userID;
-    const userData = await User.find({ UserID: UserID })
-      .select("-_id -__v -EmailVerified")
-      .populate({
-        path: "Posts",
-        options: {
-          select: "-__v -EmailVerified -userId", // Exclude fields from the populated document
-          sort: { name: -1 },
-          strictPopulate: false,
-        },
-      });
+    const userData = await findProfile(req.user.userID, true);
+    // Check BEFORE responding: you can only send one response per request
+    if (userData.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
     res.status(200).json({ success: true, userData: userData });
-    if (!userData)
-      res.status(404).json({ success: false, message: "User not found" });
   } catch (error) {
     next(error);
   }
@@ -295,26 +236,31 @@ export const editProfile = async (
   next: NextFunction
 ) => {
   try {
+    const { error } = validateProfile(req.body);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     const { Name, Username, Bio } = req.body;
     const image = req.file;
     const UserID = req.user.userID;
 
-    const { error } = validateProfile(req.body);
-    if (error) res.status(400).json({ success: false, message: error.message });
+    // Only change the fields that were actually sent
+    const update: Record<string, string> = {};
+    if (Name !== undefined) update.Name = Name;
+    if (Username !== undefined) update.Username = Username;
+    if (Bio !== undefined) update.Bio = Bio;
+    if (image) update.ProfileUrl = await uploadImage(image, "profile", UserID);
 
-    let ImgUrl;
-    if (image) {
-      const link = await ImageUpload(image, next, UserID);
-      ImgUrl = link;
+    // Returns the document as it was BEFORE the update
+    const before = await User.findByIdAndUpdate(UserID, update);
+    if (!before) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
-    const user = await User.findByIdAndUpdate(
-      UserID,
-      { Name: Name, Username: Username, Bio: Bio, ProfileUrl: ImgUrl },
-      { returnDocument: "after", upsert: true }
-    );
-    if (!user)
-      res.status(404).json({ success: false, message: "User not found" });
-    user.save();
+    if (image) {
+      // Remove the old picture from S3 (skipped automatically for Auth0 URLs)
+      const oldPicture = before.get("ProfileUrl", null, { getters: false });
+      deleteImages([oldPicture]).catch((err) => Logger.error(err));
+    }
     res.status(200).json({ success: true, message: "Profile Updated" });
   } catch (error) {
     next(error);
@@ -327,20 +273,15 @@ export const getotherUser = async (
   next: NextFunction
 ) => {
   try {
-    const userID = String(req.query.userID);
-    const userData = await User.find({ UserID: userID })
-      .select("-_id -__v -EmailVerified")
-      .populate({
-        path: "Posts",
-        options: {
-          select: "-__v -EmailVerified -userId", // Exclude fields from the populated document
-          sort: { name: -1 },
-          strictPopulate: false,
-        },
-      });
+    const { error } = validateUserID(req.query);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    const userData = await findProfile(req.query.userID as string, req.query.userID === req.user.userID);
+    if (userData.length === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
     res.status(200).json({ success: true, userData: userData });
-    if (!userData)
-      res.status(404).json({ success: false, message: "User not found" });
   } catch (error) {
     next(error);
   }
@@ -352,17 +293,19 @@ export const searchUser = async (
   next: NextFunction
 ) => {
   try {
-    const { username } = req.body;
-    const text = new RegExp(username as string, "i");
+    const { error } = validateSearch(req.body);
+    if (error) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    // Escape the input so characters like ".*(" are matched literally
+    const text = new RegExp(escapeRegex(req.body.username), "i");
 
     const user = await User.find({
       $or: [{ Username: text }, { Name: text }],
-    }).select(
-      "-_id -__v -EmailVerified -Posts -SavedPosts -Followers -Followings"
-    );
+    })
+      .select("-_id -__v -EmailVerified -Email -Auth0ID -Posts -SavedPosts -Followers -Followings -Stories")
+      .limit(20);
     res.status(200).json({ success: true, message: "User found", user: user });
-    if (!user)
-      res.status(404).json({ success: false, message: "User not found" });
   } catch (error) {
     next(error);
   }

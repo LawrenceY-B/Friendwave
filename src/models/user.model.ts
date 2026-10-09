@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import { IUser } from "../interfaces/user.interface";
+import { mediaUrl } from "../lib/s3";
 
 const UserSchema = new Schema<IUser>({
   UserID: { type: Schema.Types.ObjectId },
@@ -8,14 +9,15 @@ const UserSchema = new Schema<IUser>({
   Username: { type: String, required: true },
   Email: { type: String, required: true },
   EmailVerified: { type: Boolean, },
-  ProfileUrl: { type: String, required: true },
+  // Either an Auth0 picture URL or an S3 key of an uploaded picture
+  ProfileUrl: { type: String, required: true, get: mediaUrl },
   Bio: { type: String},
   Followers: [{ type: String, ref: "Followers", }],
   Followings: [{ type: String, ref: "Following",}],
   Posts: [{ type: Schema.Types.ObjectId, ref: "Posts",}],
   SavedPosts: [{ type: String, ref: "SavedPosts",}],
   Stories: [{type: Schema.Types.ObjectId, ref: "Stories",}],
-});
+}, { toJSON: { getters: true, virtuals: false } });
 
 const User = model<IUser>("User", UserSchema);
 

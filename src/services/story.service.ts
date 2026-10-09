@@ -1,9 +1,16 @@
-import { NextFunction, Request } from "express";
 import joi from "joi";
+import { objectId } from "../lib/validation";
 
-export const validateStory = (details: Request) => {
+export const validateStory = (data: unknown) => {
   const schema = joi.object({
-    postID: joi.string().min(6),
+    postID: objectId().required(),
   });
-  return schema.validate(details);
+  return schema.validate(data);
+};
+
+export const validateStoryID = (data: unknown) => {
+  const schema = joi.object({
+    storyId: objectId().required(),
+  });
+  return schema.validate(data);
 };
