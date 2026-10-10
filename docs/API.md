@@ -35,6 +35,18 @@ returns the same result, so a double-click can't break anything.
 | `DELETE /api/users/me/followers/:id` | remove a follower |
 | `GET /api/users/me/saved` | posts you saved |
 
+| `GET /api/users/suggestions?limit=` | "people your friends follow", ranked by `mutualCount`, with `followedBy` (up to 2 usernames); topped up with popular, then new accounts |
+
+**Notifications**
+| | |
+|---|---|
+| `GET /api/notifications` | newest first: `{ id, type, actor, post: { id, imageUrl } \| null, read, createdAt }`; `type` is `follow`, `like`, `comment`, `reply` or `story_share` |
+| `GET /api/notifications/unread-count` | `{ count }` for the red dot |
+| `POST /api/notifications/read` | mark all read |
+
+You're never notified about your own actions; liking or following twice notifies once; unliking/unfollowing
+withdraws the notification; deleting a post removes its notifications.
+
 **Posts**
 | | |
 |---|---|
@@ -81,6 +93,28 @@ socket.on("message:updated", (message) => {});          // Message
 socket.on("message:deleted", ({ id, chatId }) => {});
 
 const res = await socket.emitWithAck("message:send", { chatId, text });  // { success, data | message }
+```
+
+**Live updates for posts (pub/sub):** subscribe to the posts on screen, and unsubscribe when they leave:
+
+```ts
+socket.emit("posts:watch", { postIds });     // max 100 per connection
+socket.emit("posts:unwatch", { postIds });   // re-send "watch" after a reconnect
+
+socket.on("post:counts", ({ postId, likeCount, commentCount }) => {}); // after likes/unlikes/comments
+socket.on("comment:new", ({ postId, comment }) => {});
+socket.on("comment:deleted", ({ postId, commentId }) => {});
+socket.on("reply:new", ({ postId, commentId, reply }) => {});
+socket.on("reply:deleted", ({ postId, commentId, replyId }) => {});
+```
+
+Sent to your own user (no subscription needed):
+
+```ts
+socket.on("feed:new-post", ({ postId, authorId }) => {});  // someone you follow posted
+socket.on("notification:new", (notification) => {});
+socket.on("presence:update", ({ userId, online }) => {});  // someone you share a chat with
+const res = await socket.emitWithAck("presence:query", { userIds }); // { success, data: { [id]: online } }, chat partners only
 ```
 
 Messages sent with REST (`POST /api/chats/:id/messages`) are delivered live too. Events go to

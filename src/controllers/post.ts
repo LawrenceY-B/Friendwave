@@ -6,7 +6,10 @@ import Comment from "../models/comment.model";
 import Stories from "../models/stories.model";
 import { storage } from "../lib/s3";
 import { badRequest, notFound, pageFrom, paginate, send, sendPage } from "../lib/http";
-import { buildPosts, POST_AUTHOR } from "../services/post.service";
+import { broadcastCounts, buildPosts, POST_AUTHOR } from "../services/post.service";
+import { notify, unnotify } from "../services/notification.service";
+import Notification from "../models/notification.model";
+import { emitToUsers } from "../lib/realtime";
 import Logger from "../lib/logger";
 
 const findPost = async (postId: string) => {
@@ -49,6 +52,12 @@ export const createPost = async (req: Request, res: Response) => {
   const post = await Post.create({ userId: me, imageUrl: keys, caption: req.body.caption ?? "" });
   const [created] = await buildPosts([await findPost(String(post._id))], me);
   send(res, created, 201);
+
+  // Tell followers' open feeds there's something new ("New posts" pill)
+  Following.find({ followingID: me })
+    .distinct("userID")
+    .then((followers) => emitToUsers(followers, "feed:new-post", { postId: String(post._id), authorId: me }))
+    .catch((err) => Logger.error(err));
 };
 
 // GET /posts/:id
@@ -67,31 +76,36 @@ export const deletePost = async (req: Request, res: Response) => {
     Comment.deleteMany({ postId }),
     SavedPost.deleteMany({ postId }),
     Stories.deleteMany({ postId }),
+    Notification.deleteMany({ postId }),
   ]);
   storage.deleteImages(deleted.imageUrl).catch((err) => Logger.error(err));
   send(res, null);
 };
 
 // POST /posts/:id/like and DELETE /posts/:id/like. Idempotent, atomic.
-export const like = async (req: Request, res: Response) => {
-  const post = await Post.findByIdAndUpdate(
-    String(req.params.id),
-    { $addToSet: { likes: req.user.userID } },
-    { returnDocument: "after" }
-  ).lean();
-  if (!post) throw notFound("Post");
-  send(res, { liked: true, likeCount: post.likes.length });
+// Only an actual change notifies the author and updates live counts, so
+// liking twice (double tap + button) doesn't notify twice.
+const setLike = async (req: Request, res: Response, liked: boolean) => {
+  const postId = String(req.params.id);
+  const me = req.user.userID;
+  const result = await Post.updateOne(
+    { _id: postId },
+    liked ? { $addToSet: { likes: me } } : { $pull: { likes: me } }
+  );
+  if (result.matchedCount === 0) throw notFound("Post");
+  const post = await Post.findById(postId).select("likes userId").lean();
+  send(res, { liked, likeCount: post?.likes.length ?? 0 });
+
+  if (result.modifiedCount === 1 && post) {
+    broadcastCounts(postId);
+    const change = { recipient: post.userId, actor: me, type: "like" as const, postId };
+    if (liked) notify(change);
+    else unnotify(change);
+  }
 };
 
-export const unlike = async (req: Request, res: Response) => {
-  const post = await Post.findByIdAndUpdate(
-    String(req.params.id),
-    { $pull: { likes: req.user.userID } },
-    { returnDocument: "after" }
-  ).lean();
-  if (!post) throw notFound("Post");
-  send(res, { liked: false, likeCount: post.likes.length });
-};
+export const like = (req: Request, res: Response) => setLike(req, res, true);
+export const unlike = (req: Request, res: Response) => setLike(req, res, false);
 
 // POST /posts/:id/save and DELETE /posts/:id/save
 export const save = async (req: Request, res: Response) => {

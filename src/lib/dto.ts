@@ -91,3 +91,23 @@ export const toChat = (
   createdAt: chat.createdAt,
   updatedAt: chat.updatedAt,
 });
+
+export const toNotification = (notification: Doc, usersById: Map<string, Doc>, postsById: Map<string, Doc>) => {
+  const post = notification.postId ? postsById.get(id(notification.postId)) : null;
+  return {
+    id: id(notification._id),
+    type: notification.type as "follow" | "like" | "comment" | "reply" | "story_share",
+    actor: toUserSummary(usersById.get(id(notification.actorId))),
+    // The post it's about (with its first photo for a thumbnail), if any and still there
+    post: post ? { id: id(post._id), imageUrl: mediaUrl(post.imageUrl?.[0]) } : null,
+    read: Boolean(notification.read),
+    createdAt: notification.createdAt,
+  };
+};
+
+export const toSuggestion = (user: Doc, mutualCount: number, followedBy: string[]) => ({
+  ...toUserSummary(user)!,
+  mutualCount,
+  // Usernames of up to 2 people you follow who follow them ("Followed by alice and 2 others")
+  followedBy,
+});

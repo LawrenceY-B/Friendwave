@@ -6,6 +6,7 @@ import Following from "../models/following.model";
 import { toUserSummary } from "../lib/dto";
 import { notFound, send } from "../lib/http";
 import { buildPosts, POST_AUTHOR } from "../services/post.service";
+import { notify } from "../services/notification.service";
 
 const STORY_POPULATE = { path: "postId", populate: POST_AUTHOR };
 
@@ -53,8 +54,11 @@ export const getStories = async (req: Request, res: Response) => {
 export const createStory = async (req: Request, res: Response) => {
   const me = req.user.userID;
   const { postId } = req.body;
-  if (!(await Post.exists({ _id: postId }))) throw notFound("Post");
+  const post = await Post.findById(postId).select("userId").lean();
+  if (!post) throw notFound("Post");
   const story = await Stories.create({ userId: me, postId, storyId: randomUUID() });
+  // Sharing someone else's post: let them know (never for your own post)
+  notify({ recipient: post.userId, actor: me, type: "story_share", postId });
   const populated = await Stories.findById(story._id)
     .populate({ path: "userId", select: "Username Name ProfileUrl" })
     .populate(STORY_POPULATE)
