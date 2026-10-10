@@ -1,6 +1,9 @@
 import joi from "joi";
 import { Types } from "mongoose";
 import Comment from "../models/comment.model";
+import Post from "../models/post.model";
+import { emitToPost } from "../lib/realtime";
+import Logger from "../lib/logger";
 import SavedPost from "../models/savedpost.model";
 import { toPost, USER_SUMMARY_FIELDS } from "../lib/dto";
 
@@ -41,4 +44,16 @@ export const buildPosts = async (posts: Record<string, any>[], viewerId: string)
       savedByMe: savedIds.has(String(post._id)),
     })
   );
+};
+
+// Publishes a post's current like and comment counts to everyone watching it
+// (pub/sub topic post:<id>). Counts are read fresh, so they're always correct.
+export const broadcastCounts = (postId: string | Types.ObjectId) => {
+  (async () => {
+    const [post, commentCount] = await Promise.all([
+      Post.findById(postId).select("likes").lean(),
+      Comment.countDocuments({ postId }),
+    ]);
+    if (post) emitToPost(postId, "post:counts", { postId: String(postId), likeCount: post.likes.length, commentCount });
+  })().catch((error) => Logger.error(error));
 };

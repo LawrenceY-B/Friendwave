@@ -1,14 +1,16 @@
 import { Request, Response } from "express";
+import { Types } from "mongoose";
 import User, { USERNAME_COLLATION } from "../models/user.model";
 import Following from "../models/following.model";
 import Post from "../models/post.model";
 import SavedPost from "../models/savedpost.model";
 import { storage } from "../lib/s3";
 import { escapeRegex } from "../lib/validation";
-import { toProfile, toUserSummary, USER_SUMMARY_FIELDS } from "../lib/dto";
+import { toProfile, toSuggestion, toUserSummary, USER_SUMMARY_FIELDS } from "../lib/dto";
 import { badRequest, conflict, notFound, pageFrom, paginate, send, sendPage } from "../lib/http";
 import { buildPosts, POST_AUTHOR } from "../services/post.service";
 import Logger from "../lib/logger";
+import { notify, unnotify } from "../services/notification.service";
 
 // Counts come straight from the collections, so they can never drift out of sync
 const loadProfile = async (userId: string, viewerId: string) => {
@@ -131,20 +133,24 @@ export const follow = async (req: Request, res: Response) => {
   const target = String(req.params.id);
   if (target === me) throw badRequest("You can't follow yourself");
   await ensureUserExists(target);
+  let isNew = false;
   try {
-    await Following.updateOne({ userID: me, followingID: target }, {}, { upsert: true });
+    const result = await Following.updateOne({ userID: me, followingID: target }, {}, { upsert: true });
+    isNew = result.upsertedCount === 1;
   } catch (error: any) {
     // Two follow requests at once: the unique index stops the second, which is fine
     if (error.code !== 11000) throw error;
   }
   send(res, { following: true, followerCount: await Following.countDocuments({ followingID: target }) });
+  if (isNew) notify({ recipient: target, actor: me, type: "follow" });
 };
 
 // DELETE /users/:id/follow
 export const unfollow = async (req: Request, res: Response) => {
   const target = String(req.params.id);
-  await Following.deleteOne({ userID: req.user.userID, followingID: target });
+  const result = await Following.deleteOne({ userID: req.user.userID, followingID: target });
   send(res, { following: false, followerCount: await Following.countDocuments({ followingID: target }) });
+  if (result.deletedCount === 1) unnotify({ recipient: target, actor: req.user.userID, type: "follow" });
 };
 
 // DELETE /users/me/followers/:id. Stop someone from following you.
@@ -163,4 +169,60 @@ export const getSavedPosts = async (req: Request, res: Response) => {
   // A saved post may have been deleted since
   const posts = items.map((saved) => saved.postId as any).filter(Boolean);
   sendPage(res, await buildPosts(posts, req.user.userID), nextCursor);
+};
+
+// GET /users/suggestions. "People your friends follow": accounts followed by people
+// you follow, ranked by how many of them follow it. If that's not enough (e.g. you
+// follow nobody yet), filled up with the most-followed accounts, then the newest.
+export const getSuggestions = async (req: Request, res: Response) => {
+  const me = new Types.ObjectId(req.user.userID);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 30);
+  const following: Types.ObjectId[] = await Following.find({ userID: me }).distinct("followingID");
+  const exclude = [me, ...following];
+
+  const mutual = following.length
+    ? await Following.aggregate<{ _id: Types.ObjectId; mutualCount: number; via: Types.ObjectId[] }>([
+        { $match: { userID: { $in: following }, followingID: { $nin: exclude } } },
+        { $group: { _id: "$followingID", mutualCount: { $sum: 1 }, via: { $push: "$userID" } } },
+        { $sort: { mutualCount: -1, _id: -1 } },
+        { $limit: limit },
+      ])
+    : [];
+
+  const picked = mutual.map((m) => m._id);
+  let fill: Types.ObjectId[] = [];
+  if (picked.length < limit) {
+    const popular = await Following.aggregate<{ _id: Types.ObjectId }>([
+      { $match: { followingID: { $nin: [...exclude, ...picked] } } },
+      { $group: { _id: "$followingID", followers: { $sum: 1 } } },
+      { $sort: { followers: -1, _id: -1 } },
+      { $limit: limit - picked.length },
+    ]);
+    fill = popular.map((p) => p._id);
+  }
+  if (picked.length + fill.length < limit) {
+    const newest = await User.find({ _id: { $nin: [...exclude, ...picked, ...fill] } })
+      .sort({ _id: -1 })
+      .limit(limit - picked.length - fill.length)
+      .select("_id")
+      .lean();
+    fill = [...fill, ...newest.map((u) => u._id as Types.ObjectId)];
+  }
+
+  const viaIds = mutual.flatMap((m) => m.via.slice(0, 2));
+  const users = await User.find({ _id: { $in: [...picked, ...fill, ...viaIds] } }).select(USER_SUMMARY_FIELDS).lean();
+  const byId = new Map(users.map((u) => [String(u._id), u]));
+  const results = [
+    ...mutual.map((m) => ({ user: byId.get(String(m._id)), mutualCount: m.mutualCount, via: m.via })),
+    ...fill.map((id) => ({ user: byId.get(String(id)), mutualCount: 0, via: [] as Types.ObjectId[] })),
+  ]
+    .filter((r) => r.user)
+    .map((r) =>
+      toSuggestion(
+        r.user!,
+        r.mutualCount,
+        r.via.slice(0, 2).map((id) => byId.get(String(id))?.Username).filter(Boolean) as string[]
+      )
+    );
+  send(res, results);
 };

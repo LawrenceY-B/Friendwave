@@ -6,6 +6,9 @@ import User from "../models/user.model";
 import { toComment, toReply, USER_SUMMARY_FIELDS } from "../lib/dto";
 import { forbidden, notFound, pageFrom, paginate, send, sendPage } from "../lib/http";
 import { IReply } from "../interfaces/post.interface";
+import { emitToPost } from "../lib/realtime";
+import { broadcastCounts } from "../services/post.service";
+import { notify } from "../services/notification.service";
 
 // Loads every author (of comments and their replies) in one query
 const usersFor = async (comments: Record<string, any>[]) => {
@@ -30,10 +33,17 @@ export const getComments = async (req: Request, res: Response) => {
 // POST /posts/:id/comments  { text }
 export const createComment = async (req: Request, res: Response) => {
   const postId = String(req.params.id);
-  if (!(await Post.exists({ _id: postId }))) throw notFound("Post");
+  const post = await Post.findById(postId).select("userId").lean();
+  if (!post) throw notFound("Post");
   const comment = await Comment.create({ userId: req.user.userID, postId, comment: req.body.text });
   const plain = comment.toObject();
-  send(res, toComment(plain, await usersFor([plain])), 201);
+  const dto = toComment(plain, await usersFor([plain]));
+  send(res, dto, 201);
+
+  // Live: everyone viewing this post sees it appear; the author is notified
+  emitToPost(postId, "comment:new", { postId, comment: dto });
+  broadcastCounts(postId);
+  notify({ recipient: post.userId, actor: req.user.userID, type: "comment", postId });
 };
 
 // DELETE /comments/:id. The comment's author or the post's owner.
@@ -47,6 +57,8 @@ export const deleteComment = async (req: Request, res: Response) => {
   }
   await Comment.deleteOne({ _id: comment._id });
   send(res, null);
+  emitToPost(comment.postId, "comment:deleted", { postId: String(comment.postId), commentId: String(comment._id) });
+  broadcastCounts(comment.postId);
 };
 
 // POST /comments/:id/replies  { text }
@@ -57,10 +69,18 @@ export const createReply = async (req: Request, res: Response) => {
     reply: req.body.text,
     dateTime: new Date(),
   };
-  // $push is atomic, so two replies at once can't overwrite each other
-  const result = await Comment.updateOne({ _id: String(req.params.id) }, { $push: { replies: reply } });
-  if (result.matchedCount === 0) throw notFound("Comment");
-  send(res, toReply(reply, await usersFor([{ userId: reply.userId }])), 201);
+  // $push is atomic, so two replies at once can't overwrite each other.
+  // Returns the comment as it was before (we need its post and author).
+  const comment = await Comment.findOneAndUpdate({ _id: String(req.params.id) }, { $push: { replies: reply } })
+    .select("postId userId")
+    .lean();
+  if (!comment) throw notFound("Comment");
+  const dto = toReply(reply, await usersFor([{ userId: reply.userId }]));
+  send(res, dto, 201);
+
+  const postId = String(comment.postId);
+  emitToPost(postId, "reply:new", { postId, commentId: String(comment._id), reply: dto });
+  notify({ recipient: comment.userId, actor: req.user.userID, type: "reply", postId });
 };
 
 // DELETE /comments/:id/replies/:replyId. The reply's author or the comment's author.
@@ -76,4 +96,9 @@ export const deleteReply = async (req: Request, res: Response) => {
   }
   await Comment.updateOne({ _id: comment._id }, { $pull: { replies: { replyId } } });
   send(res, null);
+  emitToPost(comment.postId, "reply:deleted", {
+    postId: String(comment.postId),
+    commentId: String(comment._id),
+    replyId,
+  });
 };

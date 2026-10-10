@@ -23,3 +23,5 @@ export const pageQuery = {
 export const idParams = joi.object({ id: objectId().required() });
 
 export const pageOnly = joi.object(pageQuery);
+
+export const limitOnly = joi.object({ limit: joi.number().integer().min(1).max(30) });

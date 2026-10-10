@@ -8,6 +8,7 @@ import CommentRoutes from "./comment.routes";
 import StoryRoutes from "./story.routes";
 import ChatRoutes from "./chat.routes";
 import MessageRoutes from "./message.routes";
+import NotificationRoutes from "./notification.routes";
 
 // Every route in here requires a logged-in user (app.ts applies verifyToken)
 const ApiRoutes = Router();
@@ -19,5 +20,6 @@ ApiRoutes.use("/comments", CommentRoutes);
 ApiRoutes.use("/stories", StoryRoutes);
 ApiRoutes.use("/chats", ChatRoutes);
 ApiRoutes.use("/messages", MessageRoutes);
+ApiRoutes.use("/notifications", NotificationRoutes);
 
 export default ApiRoutes;

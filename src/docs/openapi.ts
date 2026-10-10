@@ -46,8 +46,13 @@ export const openapi = {
     description:
       "Send an Auth0 access token as `Authorization: Bearer <token>`. The first request from a new user creates their account. " +
       "Successful responses are `{ success: true, data }`; errors are `{ success: false, message }`. " +
-      "Realtime (socket.io): connect with `io(API_URL, { auth: { token } })`; emit `message:send` { chatId, text } with an ack; " +
-      "listen for `message:new`, `message:updated` (Message) and `message:deleted` ({ id, chatId }).",
+      "Realtime (socket.io): connect with `io(API_URL, { auth: { token } })`. " +
+      "Emit `message:send` { chatId, text } (ack); `posts:watch` / `posts:unwatch` { postIds } to subscribe to live updates " +
+      "for posts on screen; `presence:query` { userIds } (ack → { [id]: online }, chat partners only). " +
+      "Listen for `message:new` / `message:updated` (Message), `message:deleted` ({ id, chatId }), " +
+      "`post:counts` ({ postId, likeCount, commentCount }), `comment:new` ({ postId, comment }), `comment:deleted` ({ postId, commentId }), " +
+      "`reply:new` ({ postId, commentId, reply }), `reply:deleted` ({ postId, commentId, replyId }), " +
+      "`feed:new-post` ({ postId, authorId }), `notification:new` (Notification), `presence:update` ({ userId, online }).",
   },
   servers: [{ url: "http://localhost:4000" }],
   security: [{ bearer: [] }],
@@ -78,6 +83,35 @@ export const openapi = {
             properties: { isMe: { type: "boolean" }, isFollowing: { type: "boolean" } },
           },
         ],
+      },
+      Suggestion: {
+        allOf: [
+          ref("UserSummary"),
+          {
+            type: "object",
+            required: ["mutualCount", "followedBy"],
+            properties: {
+              mutualCount: { type: "integer", description: "How many people you follow follow them" },
+              followedBy: { type: "array", items: { type: "string" }, description: "Up to 2 of those usernames" },
+            },
+          },
+        ],
+      },
+      Notification: {
+        type: "object",
+        required: ["id", "type", "actor", "post", "read", "createdAt"],
+        properties: {
+          id: { type: "string" },
+          type: { enum: ["follow", "like", "comment", "reply", "story_share"] },
+          actor: nullable(ref("UserSummary")),
+          post: nullable({
+            type: "object",
+            required: ["id", "imageUrl"],
+            properties: { id: { type: "string" }, imageUrl: { type: ["string", "null"] } },
+          }),
+          read: { type: "boolean" },
+          createdAt: { type: "string", format: "date-time" },
+        },
       },
       Profile: {
         allOf: [
@@ -212,6 +246,20 @@ export const openapi = {
           },
         },
       }),
+    },
+    "/api/users/suggestions": {
+      get: op("Users", "People your friends follow (then popular / new accounts)", { 200: ok({ type: "array", items: ref("Suggestion") }) }, {
+        parameters: [{ name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 30, default: 10 } }],
+      }),
+    },
+    "/api/notifications": {
+      get: op("Notifications", "Your notifications, newest first", { 200: page(ref("Notification")) }, { parameters: pageParams }),
+    },
+    "/api/notifications/unread-count": {
+      get: op("Notifications", "Number of unread notifications", { 200: ok({ type: "object", required: ["count"], properties: { count: { type: "integer" } } }) }),
+    },
+    "/api/notifications/read": {
+      post: op("Notifications", "Mark all notifications read", { 200: ok({ type: "object", properties: { updated: { type: "integer" } } }) }),
     },
     "/api/users/me/saved": {
       get: op("Posts", "Posts you saved", { 200: page(ref("Post")) }, { parameters: pageParams }),
