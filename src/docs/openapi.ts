@@ -52,7 +52,7 @@ export const openapi = {
       "Listen for `message:new` / `message:updated` (Message), `message:deleted` ({ id, chatId }), " +
       "`post:counts` ({ postId, likeCount, commentCount }), `comment:new` ({ postId, comment }), `comment:deleted` ({ postId, commentId }), " +
       "`reply:new` ({ postId, commentId, reply }), `reply:deleted` ({ postId, commentId, replyId }), " +
-      "`feed:new-post` ({ postId, authorId }), `notification:new` (Notification), `presence:update` ({ userId, online }).",
+      "`feed:new-post` ({ postId, authorId }), `notification:new` (Notification), `presence:update` ({ userId, online }), `chat:read` ({ chatId }).",
   },
   servers: [{ url: "http://localhost:4000" }],
   security: [{ bearer: [] }],
@@ -197,11 +197,12 @@ export const openapi = {
       },
       Chat: {
         type: "object",
-        required: ["id", "participants", "lastMessage", "createdAt", "updatedAt"],
+        required: ["id", "participants", "lastMessage", "unreadCount", "createdAt", "updatedAt"],
         properties: {
           id: { type: "string" },
           participants: { type: "array", items: ref("UserSummary"), description: "The other people in the chat" },
           lastMessage: nullable(ref("Message")),
+          unreadCount: { type: "integer", description: "Messages from the others you haven't read yet" },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time", description: "Time of the last message" },
         },
@@ -343,6 +344,16 @@ export const openapi = {
       post: op("Chats", "Open a chat with someone (returns the existing one if any)", { 200: ok(ref("Chat"), "Existing chat"), 201: ok(ref("Chat"), "Created") }, {
         requestBody: { required: true, ...json({ type: "object", required: ["userId"], properties: { userId: { type: "string" } } }) },
       }),
+    },
+    "/api/chats/unread": {
+      get: op("Chats", "Chats with unread messages (for a red dot)", {
+        200: ok({ type: "object", required: ["chatIds"], properties: { chatIds: { type: "array", items: { type: "string" } } } }),
+      }),
+    },
+    "/api/chats/{id}/read": {
+      post: op("Chats", "Mark a chat read (also sent live to your other tabs as chat:read)", {
+        200: ok({ type: "object", required: ["chatId"], properties: { chatId: { type: "string" } } }),
+      }, { parameters: [id()] }),
     },
     "/api/chats/{id}": {
       get: op("Chats", "A chat (members only)", { 200: ok(ref("Chat")) }, { parameters: [id()] }),

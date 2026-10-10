@@ -25,6 +25,7 @@ const isId = (value: unknown): value is string => typeof value === "string" && /
 //   "feed:new-post" { postId, authorId }      to followers of the author
 //   "notification:new" Notification
 //   "presence:update" { userId, online }      to people you share a chat with
+//   "chat:read" { chatId }                     to yourself (other tabs/devices) when you read a chat
 export default class SocketManager {
   constructor(private io: SocketIOServer) {
     this.setupAuth();

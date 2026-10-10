@@ -74,7 +74,9 @@ withdraws the notification; deleting a post removes its notifications.
 **Chats**
 | | |
 |---|---|
-| `GET /api/chats` | `[{ id, participants, lastMessage, updatedAt }]`, most recent first |
+| `GET /api/chats` | `[{ id, participants, lastMessage, unreadCount, updatedAt }]`, most recent first |
+| `GET /api/chats/unread` | `{ chatIds }`: chats with unread messages (for a red dot on Chats) |
+| `POST /api/chats/:id/read` | mark it read (you opened it); your other tabs get `chat:read` |
 | `POST /api/chats` | `{ userId }` → the existing chat (200) or a new one (201) |
 | `GET` / `DELETE /api/chats/:id` | one chat / delete it and its messages |
 | `GET` / `POST /api/chats/:id/messages` | history (newest first) / send `{ text }` |
@@ -114,6 +116,7 @@ Sent to your own user (no subscription needed):
 socket.on("feed:new-post", ({ postId, authorId }) => {});  // someone you follow posted
 socket.on("notification:new", (notification) => {});
 socket.on("presence:update", ({ userId, online }) => {});  // someone you share a chat with
+socket.on("chat:read", ({ chatId }) => {});                // you read a chat (in another tab/device)
 const res = await socket.emitWithAck("presence:query", { userIds }); // { success, data: { [id]: online } }, chat partners only
 ```
 
