@@ -69,6 +69,7 @@ All database scripts do a dry run unless given `--apply`, and write a backup to 
 | Script | Purpose |
 |---|---|
 | `get-token.mjs` (`npm run token`) | Auth0 access token for a test user |
+| `postman-collection.mjs` (`npm run postman`) | regenerate `docs/friendwave.postman_collection.json` from the OpenAPI spec (import it in Postman; set `baseUrl` and `token`) |
 | `link-accounts.mjs` | link two Auth0 logins of one person |
 | `merge-users.mjs` | merge Friendwave accounts after linking |
 | `cleanup-data.mjs` | repair broken references, misplaced messages, old image links |

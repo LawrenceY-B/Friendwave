@@ -8,6 +8,7 @@
     "start": "node ./build/server.js",
     "build": "tsc",
     "token": "node scripts/get-token.mjs",
+    "postman": "node --import tsx scripts/postman-collection.mjs",
     "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts"
   },
   "keywords": [],
