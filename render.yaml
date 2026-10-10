@@ -8,9 +8,9 @@ services:
     # Free instances sleep after ~15 min idle (first request then waits ~1 min,
     # live chat sockets drop, the log-cleanup job doesn't run). "starter" stays awake.
     plan: free
-    # Pick the region closest to your MongoDB Atlas cluster and your Vercel functions,
-    # e.g. frankfurt, oregon, ohio, virginia, singapore. Can't be changed later.
-    region: oregon
+    # Next to the MongoDB Atlas cluster (AWS us-east-1, N. Virginia) and the Vercel
+    # functions (iad1). Can't be changed after the service is created.
+    region: virginia
     # devDependencies (TypeScript) are needed to build, so NODE_ENV isn't set to production here
     buildCommand: npm ci && npm run build
     startCommand: npm start

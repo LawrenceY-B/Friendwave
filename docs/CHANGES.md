@@ -402,7 +402,7 @@ Removed: `JWTKEY`, `AUTH0SECRET`, `AUTH0CLIENTID`, `AUTH0BASEURL`.
 
 ## Deploying on Render
 
-1. **Pick the region** in `render.yaml` (near your MongoDB Atlas cluster and your Vercel functions), commit, push.
+1. The region in `render.yaml` is `virginia`, next to the Atlas cluster (AWS us-east-1) and the Vercel functions (`iad1`).
 2. Render Dashboard → **New → Blueprint** → this repo. It reads `render.yaml` (build `npm ci && npm run build`,
    start `npm start`, health check `/health`, Node 22, `PROD_ENV=Production`) and asks for the secrets:
    `MONGODBURL`, `ISSUERBASEURL`, `AUTH0_AUDIENCE`, `AWS_ACCESS_KEY`, `AWS_SECRET_ACCESS_KEY`,
