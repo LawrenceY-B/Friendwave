@@ -84,7 +84,69 @@
             "auth": {
               "type": "noauth"
             }
-          }
+          },
+          "response": [
+            {
+              "name": "200 Up",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                },
+                "description": "Health check (no auth)\n\n`GET /health`",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"status\": \"ok\",\n  \"db\": true\n}"
+            },
+            {
+              "name": "503 Database down",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                },
+                "description": "Health check (no auth)\n\n`GET /health`",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"status\": \"degraded\",\n  \"db\": false\n}"
+            }
+          ]
         },
         {
           "name": "Image (no auth). Redirects to a short-lived S3 link",
@@ -112,12 +174,86 @@
             "auth": {
               "type": "noauth"
             }
-          }
+          },
+          "response": [
+            {
+              "name": "302 Redirect to the image",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/:key",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    ":key"
+                  ],
+                  "variable": [
+                    {
+                      "key": "key",
+                      "value": "{{mediaKey}}"
+                    }
+                  ]
+                },
+                "description": "Image (no auth). Redirects to a short-lived S3 link\n\n`GET /api/media/{key}`",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Found",
+              "code": 302,
+              "_postman_previewlanguage": "text",
+              "header": [
+                {
+                  "key": "Location",
+                  "value": "https://friendwave-media.s3.amazonaws.com/posts/6705f0b7-1.jpg?X-Amz-Expires=3600"
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "404 Unknown image",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/media/:key",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "media",
+                    ":key"
+                  ],
+                  "variable": [
+                    {
+                      "key": "key",
+                      "value": "{{mediaKey}}"
+                    }
+                  ]
+                },
+                "description": "Image (no auth). Redirects to a short-lived S3 link\n\n`GET /api/media/{key}`",
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            }
+          ]
         }
       ]
     },
     {
       "name": "Posts",
+      "description": "**Home feed**\n\n![Home feed](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/feed.png)\n\n**A post**\n\n![A post](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/post.png)",
       "item": [
         {
           "name": "Your posts and posts of people you follow",
@@ -149,7 +285,93 @@
               ]
             },
             "description": "Your posts and posts of people you follow\n\n`GET /api/feed`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 A page of results, newest first. Pass nextCursor as ?cursor= for the next page.",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/feed",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "feed"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Your posts and posts of people you follow\n\n`GET /api/feed`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"author\": {\n        \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"username\": \"ama.mensah\",\n        \"name\": \"Ama Mensah\",\n        \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n      },\n      \"caption\": \"Golden hour at Labadi Beach 🌅\",\n      \"images\": [\n        \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\"\n      ],\n      \"likeCount\": 12,\n      \"likedByMe\": true,\n      \"commentCount\": 12,\n      \"savedByMe\": true,\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n    }\n  ],\n  \"nextCursor\": \"6705e0f2a9e4b3d7c8f00f99\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/feed",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "feed"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Your posts and posts of people you follow\n\n`GET /api/feed`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "Posts you saved",
@@ -183,7 +405,97 @@
               ]
             },
             "description": "Posts you saved\n\n`GET /api/users/me/saved`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 A page of results, newest first. Pass nextCursor as ?cursor= for the next page.",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/saved",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "saved"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Posts you saved\n\n`GET /api/users/me/saved`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"author\": {\n        \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"username\": \"ama.mensah\",\n        \"name\": \"Ama Mensah\",\n        \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n      },\n      \"caption\": \"Golden hour at Labadi Beach 🌅\",\n      \"images\": [\n        \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\"\n      ],\n      \"likeCount\": 12,\n      \"likedByMe\": true,\n      \"commentCount\": 12,\n      \"savedByMe\": true,\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n    }\n  ],\n  \"nextCursor\": \"6705e0f2a9e4b3d7c8f00f99\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/saved",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "saved"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Posts you saved\n\n`GET /api/users/me/saved`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "A user's posts",
@@ -223,7 +535,159 @@
               ]
             },
             "description": "A user's posts\n\n`GET /api/users/{id}/posts`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 A page of results, newest first. Pass nextCursor as ?cursor= for the next page.",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/posts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "posts"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "A user's posts\n\n`GET /api/users/{id}/posts`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"author\": {\n        \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"username\": \"ama.mensah\",\n        \"name\": \"Ama Mensah\",\n        \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n      },\n      \"caption\": \"Golden hour at Labadi Beach 🌅\",\n      \"images\": [\n        \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\"\n      ],\n      \"likeCount\": 12,\n      \"likedByMe\": true,\n      \"commentCount\": 12,\n      \"savedByMe\": true,\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n    }\n  ],\n  \"nextCursor\": \"6705e0f2a9e4b3d7c8f00f99\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/posts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "posts"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "A user's posts\n\n`GET /api/users/{id}/posts`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/posts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "posts"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "A user's posts\n\n`GET /api/users/{id}/posts`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"User not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Create a post",
@@ -259,6 +723,143 @@
               ]
             }
           },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts"
+                  ]
+                },
+                "description": "Create a post\n\n`POST /api/posts`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "images",
+                      "type": "file",
+                      "src": [],
+                      "description": "Images, max 5 MB each"
+                    },
+                    {
+                      "key": "caption",
+                      "type": "text",
+                      "value": "Posted from Postman",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n    \"author\": {\n      \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"username\": \"ama.mensah\",\n      \"name\": \"Ama Mensah\",\n      \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n    },\n    \"caption\": \"Golden hour at Labadi Beach 🌅\",\n    \"images\": [\n      \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\"\n    ],\n    \"likeCount\": 12,\n    \"likedByMe\": true,\n    \"commentCount\": 12,\n    \"savedByMe\": true,\n    \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Invalid input",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts"
+                  ]
+                },
+                "description": "Create a post\n\n`POST /api/posts`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "images",
+                      "type": "file",
+                      "src": [],
+                      "description": "Images, max 5 MB each"
+                    },
+                    {
+                      "key": "caption",
+                      "type": "text",
+                      "value": "Posted from Postman",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"At least one image is required\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts"
+                  ]
+                },
+                "description": "Create a post\n\n`POST /api/posts`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "images",
+                      "type": "file",
+                      "src": [],
+                      "description": "Images, max 5 MB each"
+                    },
+                    {
+                      "key": "caption",
+                      "type": "text",
+                      "value": "Posted from Postman",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ],
           "event": [
             {
               "listen": "test",
@@ -296,7 +897,114 @@
               ]
             },
             "description": "A post\n\n`GET /api/posts/{id}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "A post\n\n`GET /api/posts/{id}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n    \"author\": {\n      \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"username\": \"ama.mensah\",\n      \"name\": \"Ama Mensah\",\n      \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n    },\n    \"caption\": \"Golden hour at Labadi Beach 🌅\",\n    \"images\": [\n      \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\"\n    ],\n    \"likeCount\": 12,\n    \"likedByMe\": true,\n    \"commentCount\": 12,\n    \"savedByMe\": true,\n    \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "A post\n\n`GET /api/posts/{id}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "A post\n\n`GET /api/posts/{id}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Delete your post",
@@ -321,7 +1029,114 @@
               ]
             },
             "description": "Delete your post\n\n`DELETE /api/posts/{id}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Delete your post\n\n`DELETE /api/posts/{id}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": null\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Delete your post\n\n`DELETE /api/posts/{id}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Delete your post\n\n`DELETE /api/posts/{id}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Like (idempotent)",
@@ -347,7 +1162,117 @@
               ]
             },
             "description": "Like (idempotent)\n\n`POST /api/posts/{id}/like`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/like",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "like"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Like (idempotent)\n\n`POST /api/posts/{id}/like`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"liked\": true,\n    \"likeCount\": 12\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/like",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "like"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Like (idempotent)\n\n`POST /api/posts/{id}/like`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/like",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "like"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Like (idempotent)\n\n`POST /api/posts/{id}/like`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Unlike (idempotent)",
@@ -373,7 +1298,117 @@
               ]
             },
             "description": "Unlike (idempotent)\n\n`DELETE /api/posts/{id}/like`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/like",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "like"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Unlike (idempotent)\n\n`DELETE /api/posts/{id}/like`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"liked\": false,\n    \"likeCount\": 12\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/like",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "like"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Unlike (idempotent)\n\n`DELETE /api/posts/{id}/like`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/like",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "like"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Unlike (idempotent)\n\n`DELETE /api/posts/{id}/like`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Save (idempotent)",
@@ -399,7 +1434,117 @@
               ]
             },
             "description": "Save (idempotent)\n\n`POST /api/posts/{id}/save`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "save"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Save (idempotent)\n\n`POST /api/posts/{id}/save`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"saved\": true\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "save"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Save (idempotent)\n\n`POST /api/posts/{id}/save`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "save"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Save (idempotent)\n\n`POST /api/posts/{id}/save`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Unsave (idempotent)",
@@ -425,12 +1570,123 @@
               ]
             },
             "description": "Unsave (idempotent)\n\n`DELETE /api/posts/{id}/save`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "save"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Unsave (idempotent)\n\n`DELETE /api/posts/{id}/save`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"saved\": false\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "save"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Unsave (idempotent)\n\n`DELETE /api/posts/{id}/save`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/save",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "save"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Unsave (idempotent)\n\n`DELETE /api/posts/{id}/save`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}"
+            }
+          ]
         }
       ]
     },
     {
       "name": "Users",
+      "description": "**Your profile**\n\n![Your profile](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/profile.png)\n\n**Search**\n\n![Search](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/search.png)\n\n**Edit profile**\n\n![Edit profile](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/edit-profile.png)",
       "item": [
         {
           "name": "Search users by username or name",
@@ -468,7 +1724,105 @@
               ]
             },
             "description": "Search users by username or name\n\n`GET /api/users`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 A page of results, newest first. Pass nextCursor as ?cursor= for the next page.",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users?search=al",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "al",
+                      "description": "Required",
+                      "disabled": false
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Search users by username or name\n\n`GET /api/users`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"username\": \"ama.mensah\",\n      \"name\": \"Ama Mensah\",\n      \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\",\n      \"isMe\": false,\n      \"isFollowing\": true\n    }\n  ],\n  \"nextCursor\": \"6705e0f2a9e4b3d7c8f00f99\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users?search=al",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": "al",
+                      "description": "Required",
+                      "disabled": false
+                    },
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Search users by username or name\n\n`GET /api/users`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "Your profile",
@@ -488,6 +1842,66 @@
             },
             "description": "Your profile\n\n`GET /api/users/me`"
           },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                },
+                "description": "Your profile\n\n`GET /api/users/me`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n    \"username\": \"ama.mensah\",\n    \"name\": \"Ama Mensah\",\n    \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\",\n    \"bio\": \"Coffee, film cameras and long walks ☕📷\",\n    \"followerCount\": 12,\n    \"followingCount\": 12,\n    \"postCount\": 12,\n    \"isMe\": true,\n    \"isFollowing\": true,\n    \"email\": \"ama@example.com\"\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                },
+                "description": "Your profile\n\n`GET /api/users/me`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ],
           "event": [
             {
               "listen": "test",
@@ -528,7 +1942,123 @@
                 }
               }
             }
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                },
+                "description": "Delete your account and everything of yours (type your username to confirm)\n\n`DELETE /api/users/me`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm\": \"confirm\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"deleted\": true,\n    \"auth0Deleted\": true\n  }\n}"
+            },
+            {
+              "name": "400 Invalid input",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                },
+                "description": "Delete your account and everything of yours (type your username to confirm)\n\n`DELETE /api/users/me`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm\": \"confirm\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Type your username exactly to confirm\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                },
+                "description": "Delete your account and everything of yours (type your username to confirm)\n\n`DELETE /api/users/me`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm\": \"confirm\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "Update your profile (send only the fields you change)",
@@ -576,7 +2106,241 @@
                 }
               ]
             }
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                },
+                "description": "Update your profile (send only the fields you change)\n\n`PATCH /api/users/me`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "name",
+                      "type": "text",
+                      "value": "Postman User",
+                      "disabled": true
+                    },
+                    {
+                      "key": "username",
+                      "type": "text",
+                      "value": "postman_user",
+                      "disabled": true
+                    },
+                    {
+                      "key": "bio",
+                      "type": "text",
+                      "value": "Testing the API",
+                      "disabled": true
+                    },
+                    {
+                      "key": "avatar",
+                      "type": "file",
+                      "src": [],
+                      "description": "Image, max 5 MB"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n    \"username\": \"ama.mensah\",\n    \"name\": \"Ama Mensah\",\n    \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\",\n    \"bio\": \"Coffee, film cameras and long walks ☕📷\",\n    \"followerCount\": 12,\n    \"followingCount\": 12,\n    \"postCount\": 12,\n    \"isMe\": true,\n    \"isFollowing\": true,\n    \"email\": \"ama@example.com\"\n  }\n}"
+            },
+            {
+              "name": "400 Invalid input",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                },
+                "description": "Update your profile (send only the fields you change)\n\n`PATCH /api/users/me`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "name",
+                      "type": "text",
+                      "value": "Postman User",
+                      "disabled": true
+                    },
+                    {
+                      "key": "username",
+                      "type": "text",
+                      "value": "postman_user",
+                      "disabled": true
+                    },
+                    {
+                      "key": "bio",
+                      "type": "text",
+                      "value": "Testing the API",
+                      "disabled": true
+                    },
+                    {
+                      "key": "avatar",
+                      "type": "file",
+                      "src": [],
+                      "description": "Image, max 5 MB"
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"bio length must be less than or equal to 150 characters long\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                },
+                "description": "Update your profile (send only the fields you change)\n\n`PATCH /api/users/me`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "name",
+                      "type": "text",
+                      "value": "Postman User",
+                      "disabled": true
+                    },
+                    {
+                      "key": "username",
+                      "type": "text",
+                      "value": "postman_user",
+                      "disabled": true
+                    },
+                    {
+                      "key": "bio",
+                      "type": "text",
+                      "value": "Testing the API",
+                      "disabled": true
+                    },
+                    {
+                      "key": "avatar",
+                      "type": "file",
+                      "src": [],
+                      "description": "Image, max 5 MB"
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "409 Username taken",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me"
+                  ]
+                },
+                "description": "Update your profile (send only the fields you change)\n\n`PATCH /api/users/me`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "name",
+                      "type": "text",
+                      "value": "Postman User",
+                      "disabled": true
+                    },
+                    {
+                      "key": "username",
+                      "type": "text",
+                      "value": "postman_user",
+                      "disabled": true
+                    },
+                    {
+                      "key": "bio",
+                      "type": "text",
+                      "value": "Testing the API",
+                      "disabled": true
+                    },
+                    {
+                      "key": "avatar",
+                      "type": "file",
+                      "src": [],
+                      "description": "Image, max 5 MB"
+                    }
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Username already taken\"\n}"
+            }
+          ]
         },
         {
           "name": "People your friends follow (then popular / new accounts)",
@@ -603,7 +2367,83 @@
               ]
             },
             "description": "People your friends follow (then popular / new accounts)\n\n`GET /api/users/suggestions`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/suggestions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "suggestions"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "People your friends follow (then popular / new accounts)\n\n`GET /api/users/suggestions`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"username\": \"ama.mensah\",\n      \"name\": \"Ama Mensah\",\n      \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\",\n      \"mutualCount\": 12,\n      \"followedBy\": [\n        \"kofi.boateng\",\n        \"efua_a\"\n      ]\n    }\n  ]\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/suggestions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "suggestions"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "People your friends follow (then popular / new accounts)\n\n`GET /api/users/suggestions`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "Remove a follower",
@@ -630,7 +2470,120 @@
               ]
             },
             "description": "Remove a follower\n\n`DELETE /api/users/me/followers/{id}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/followers/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "followers",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Remove a follower\n\n`DELETE /api/users/me/followers/{id}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"removed\": true\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/followers/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "followers",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Remove a follower\n\n`DELETE /api/users/me/followers/{id}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/me/followers/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    "me",
+                    "followers",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Remove a follower\n\n`DELETE /api/users/me/followers/{id}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"User not found\"\n}"
+            }
+          ]
         },
         {
           "name": "A user's profile",
@@ -655,7 +2608,114 @@
               ]
             },
             "description": "A user's profile\n\n`GET /api/users/{id}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "A user's profile\n\n`GET /api/users/{id}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n    \"username\": \"ama.mensah\",\n    \"name\": \"Ama Mensah\",\n    \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\",\n    \"bio\": \"Coffee, film cameras and long walks ☕📷\",\n    \"followerCount\": 12,\n    \"followingCount\": 12,\n    \"postCount\": 12,\n    \"isMe\": false,\n    \"isFollowing\": true,\n    \"email\": \"ama@example.com\"\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "A user's profile\n\n`GET /api/users/{id}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "A user's profile\n\n`GET /api/users/{id}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"User not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Who follows this user",
@@ -695,7 +2755,159 @@
               ]
             },
             "description": "Who follows this user\n\n`GET /api/users/{id}/followers`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 A page of results, newest first. Pass nextCursor as ?cursor= for the next page.",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/followers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "followers"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Who follows this user\n\n`GET /api/users/{id}/followers`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"username\": \"ama.mensah\",\n      \"name\": \"Ama Mensah\",\n      \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n    }\n  ],\n  \"nextCursor\": \"6705e0f2a9e4b3d7c8f00f99\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/followers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "followers"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Who follows this user\n\n`GET /api/users/{id}/followers`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/followers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "followers"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Who follows this user\n\n`GET /api/users/{id}/followers`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"User not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Who this user follows",
@@ -735,7 +2947,159 @@
               ]
             },
             "description": "Who this user follows\n\n`GET /api/users/{id}/following`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 A page of results, newest first. Pass nextCursor as ?cursor= for the next page.",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/following",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "following"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Who this user follows\n\n`GET /api/users/{id}/following`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"username\": \"ama.mensah\",\n      \"name\": \"Ama Mensah\",\n      \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n    }\n  ],\n  \"nextCursor\": \"6705e0f2a9e4b3d7c8f00f99\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/following",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "following"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Who this user follows\n\n`GET /api/users/{id}/following`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/following",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "following"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Who this user follows\n\n`GET /api/users/{id}/following`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"User not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Follow (idempotent)",
@@ -761,7 +3125,117 @@
               ]
             },
             "description": "Follow (idempotent)\n\n`POST /api/users/{id}/follow`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "follow"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Follow (idempotent)\n\n`POST /api/users/{id}/follow`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"following\": true,\n    \"followerCount\": 12\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "follow"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Follow (idempotent)\n\n`POST /api/users/{id}/follow`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "follow"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Follow (idempotent)\n\n`POST /api/users/{id}/follow`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"User not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Unfollow (idempotent)",
@@ -787,12 +3261,123 @@
               ]
             },
             "description": "Unfollow (idempotent)\n\n`DELETE /api/users/{id}/follow`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "follow"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Unfollow (idempotent)\n\n`DELETE /api/users/{id}/follow`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"following\": false,\n    \"followerCount\": 12\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "follow"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Unfollow (idempotent)\n\n`DELETE /api/users/{id}/follow`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/:id/follow",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "users",
+                    ":id",
+                    "follow"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{userId}}"
+                    }
+                  ]
+                },
+                "description": "Unfollow (idempotent)\n\n`DELETE /api/users/{id}/follow`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"User not found\"\n}"
+            }
+          ]
         }
       ]
     },
     {
       "name": "Notifications",
+      "description": "**Notifications**\n\n![Notifications](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/notifications.png)",
       "item": [
         {
           "name": "Your notifications, newest first",
@@ -824,7 +3409,93 @@
               ]
             },
             "description": "Your notifications, newest first\n\n`GET /api/notifications`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 A page of results, newest first. Pass nextCursor as ?cursor= for the next page.",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/notifications",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "notifications"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Your notifications, newest first\n\n`GET /api/notifications`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"type\": \"follow\",\n      \"actor\": {\n        \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"username\": \"ama.mensah\",\n        \"name\": \"Ama Mensah\",\n        \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n      },\n      \"post\": {\n        \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n        \"imageUrl\": \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\"\n      },\n      \"read\": false,\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n    }\n  ],\n  \"nextCursor\": \"6705e0f2a9e4b3d7c8f00f99\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/notifications",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "notifications"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Your notifications, newest first\n\n`GET /api/notifications`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "Number of unread notifications",
@@ -843,7 +3514,67 @@
               ]
             },
             "description": "Number of unread notifications\n\n`GET /api/notifications/unread-count`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/notifications/unread-count",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "notifications",
+                    "unread-count"
+                  ]
+                },
+                "description": "Number of unread notifications\n\n`GET /api/notifications/unread-count`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"count\": 12\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/notifications/unread-count",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "notifications",
+                    "unread-count"
+                  ]
+                },
+                "description": "Number of unread notifications\n\n`GET /api/notifications/unread-count`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "Mark all notifications read",
@@ -862,12 +3593,73 @@
               ]
             },
             "description": "Mark all notifications read\n\n`POST /api/notifications/read`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/notifications/read",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "notifications",
+                    "read"
+                  ]
+                },
+                "description": "Mark all notifications read\n\n`POST /api/notifications/read`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"updated\": 1\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/notifications/read",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "notifications",
+                    "read"
+                  ]
+                },
+                "description": "Mark all notifications read\n\n`POST /api/notifications/read`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         }
       ]
     },
     {
       "name": "Comments",
+      "description": "**Comments and replies**\n\n![Comments and replies](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/post.png)",
       "item": [
         {
           "name": "Comments on a post, newest first",
@@ -907,7 +3699,159 @@
               ]
             },
             "description": "Comments on a post, newest first\n\n`GET /api/posts/{id}/comments`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 A page of results, newest first. Pass nextCursor as ?cursor= for the next page.",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/comments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "comments"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Comments on a post, newest first\n\n`GET /api/posts/{id}/comments`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"postId\": \"6705f0b7a9e4b3d7c8f01a11\",\n      \"author\": {\n        \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"username\": \"ama.mensah\",\n        \"name\": \"Ama Mensah\",\n        \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n      },\n      \"text\": \"That view is unreal 😍\",\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n      \"replies\": [\n        {\n          \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n          \"author\": {\n            \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n            \"username\": \"ama.mensah\",\n            \"name\": \"Ama Mensah\",\n            \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n          },\n          \"text\": \"That view is unreal 😍\",\n          \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n        }\n      ]\n    }\n  ],\n  \"nextCursor\": \"6705e0f2a9e4b3d7c8f00f99\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/comments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "comments"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Comments on a post, newest first\n\n`GET /api/posts/{id}/comments`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/comments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "comments"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Comments on a post, newest first\n\n`GET /api/posts/{id}/comments`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Comment on a post",
@@ -943,6 +3887,188 @@
               }
             }
           },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/comments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "comments"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Comment on a post\n\n`POST /api/posts/{id}/comments`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n    \"postId\": \"6705f0b7a9e4b3d7c8f01a11\",\n    \"author\": {\n      \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"username\": \"ama.mensah\",\n      \"name\": \"Ama Mensah\",\n      \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n    },\n    \"text\": \"That view is unreal 😍\",\n    \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n    \"replies\": [\n      {\n        \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n        \"author\": {\n          \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n          \"username\": \"ama.mensah\",\n          \"name\": \"Ama Mensah\",\n          \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n        },\n        \"text\": \"That view is unreal 😍\",\n        \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "400 Invalid input",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/comments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "comments"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Comment on a post\n\n`POST /api/posts/{id}/comments`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"text is required\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/comments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "comments"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Comment on a post\n\n`POST /api/posts/{id}/comments`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/posts/:id/comments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "posts",
+                    ":id",
+                    "comments"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{postId}}"
+                    }
+                  ]
+                },
+                "description": "Comment on a post\n\n`POST /api/posts/{id}/comments`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Post not found\"\n}"
+            }
+          ],
           "event": [
             {
               "listen": "test",
@@ -980,7 +4106,114 @@
               ]
             },
             "description": "Delete a comment (its author or the post's owner)\n\n`DELETE /api/comments/{id}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    }
+                  ]
+                },
+                "description": "Delete a comment (its author or the post's owner)\n\n`DELETE /api/comments/{id}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": null\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    }
+                  ]
+                },
+                "description": "Delete a comment (its author or the post's owner)\n\n`DELETE /api/comments/{id}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    }
+                  ]
+                },
+                "description": "Delete a comment (its author or the post's owner)\n\n`DELETE /api/comments/{id}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Comment not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Reply to a comment",
@@ -1016,6 +4249,188 @@
               }
             }
           },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id/replies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id",
+                    "replies"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    }
+                  ]
+                },
+                "description": "Reply to a comment\n\n`POST /api/comments/{id}/replies`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n    \"author\": {\n      \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"username\": \"ama.mensah\",\n      \"name\": \"Ama Mensah\",\n      \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n    },\n    \"text\": \"That view is unreal 😍\",\n    \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Invalid input",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id/replies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id",
+                    "replies"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    }
+                  ]
+                },
+                "description": "Reply to a comment\n\n`POST /api/comments/{id}/replies`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"text is required\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id/replies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id",
+                    "replies"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    }
+                  ]
+                },
+                "description": "Reply to a comment\n\n`POST /api/comments/{id}/replies`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id/replies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id",
+                    "replies"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    }
+                  ]
+                },
+                "description": "Reply to a comment\n\n`POST /api/comments/{id}/replies`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Comment not found\"\n}"
+            }
+          ],
           "event": [
             {
               "listen": "test",
@@ -1059,12 +4474,138 @@
               ]
             },
             "description": "Delete a reply (its author or the comment's author)\n\n`DELETE /api/comments/{id}/replies/{replyId}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id/replies/:replyId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id",
+                    "replies",
+                    ":replyId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    },
+                    {
+                      "key": "replyId",
+                      "value": "{{replyId}}"
+                    }
+                  ]
+                },
+                "description": "Delete a reply (its author or the comment's author)\n\n`DELETE /api/comments/{id}/replies/{replyId}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": null\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id/replies/:replyId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id",
+                    "replies",
+                    ":replyId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    },
+                    {
+                      "key": "replyId",
+                      "value": "{{replyId}}"
+                    }
+                  ]
+                },
+                "description": "Delete a reply (its author or the comment's author)\n\n`DELETE /api/comments/{id}/replies/{replyId}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/comments/:id/replies/:replyId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "comments",
+                    ":id",
+                    "replies",
+                    ":replyId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{commentId}}"
+                    },
+                    {
+                      "key": "replyId",
+                      "value": "{{replyId}}"
+                    }
+                  ]
+                },
+                "description": "Delete a reply (its author or the comment's author)\n\n`DELETE /api/comments/{id}/replies/{replyId}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Reply not found\"\n}"
+            }
+          ]
         }
       ]
     },
     {
       "name": "Stories",
+      "description": "**Watching a story**\n\n![Watching a story](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/stories.png)",
       "item": [
         {
           "name": "Live stories from you and people you follow, grouped by author",
@@ -1082,7 +4623,65 @@
               ]
             },
             "description": "Live stories from you and people you follow, grouped by author\n\n`GET /api/stories`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/stories",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "stories"
+                  ]
+                },
+                "description": "Live stories from you and people you follow, grouped by author\n\n`GET /api/stories`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"author\": {\n        \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"username\": \"ama.mensah\",\n        \"name\": \"Ama Mensah\",\n        \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n      },\n      \"stories\": [\n        {\n          \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n          \"post\": {\n            \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n            \"author\": {\n              \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n              \"username\": \"ama.mensah\",\n              \"name\": \"Ama Mensah\",\n              \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n            },\n            \"caption\": \"Golden hour at Labadi Beach 🌅\",\n            \"images\": [\n              \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\"\n            ],\n            \"likeCount\": 12,\n            \"likedByMe\": true,\n            \"commentCount\": 12,\n            \"savedByMe\": true,\n            \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n          },\n          \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n          \"expiresAt\": \"2026-10-11T09:30:00.000Z\"\n        }\n      ]\n    }\n  ]\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/stories",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "stories"
+                  ]
+                },
+                "description": "Live stories from you and people you follow, grouped by author\n\n`GET /api/stories`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "Share a post to your story (24h)",
@@ -1110,6 +4709,119 @@
               }
             }
           },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/stories",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "stories"
+                  ]
+                },
+                "description": "Share a post to your story (24h)\n\n`POST /api/stories`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"postId\": \"{{postId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n    \"post\": {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"author\": {\n        \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"username\": \"ama.mensah\",\n        \"name\": \"Ama Mensah\",\n        \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n      },\n      \"caption\": \"Golden hour at Labadi Beach 🌅\",\n      \"images\": [\n        \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\"\n      ],\n      \"likeCount\": 12,\n      \"likedByMe\": true,\n      \"commentCount\": 12,\n      \"savedByMe\": true,\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\"\n    },\n    \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n    \"expiresAt\": \"2026-10-11T09:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Invalid input",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/stories",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "stories"
+                  ]
+                },
+                "description": "Share a post to your story (24h)\n\n`POST /api/stories`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"postId\": \"{{postId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"postId is required\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/stories",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "stories"
+                  ]
+                },
+                "description": "Share a post to your story (24h)\n\n`POST /api/stories`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"postId\": \"{{postId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ],
           "event": [
             {
               "listen": "test",
@@ -1147,12 +4859,120 @@
               ]
             },
             "description": "Delete your story\n\n`DELETE /api/stories/{id}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/stories/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "stories",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{storyId}}"
+                    }
+                  ]
+                },
+                "description": "Delete your story\n\n`DELETE /api/stories/{id}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": null\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/stories/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "stories",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{storyId}}"
+                    }
+                  ]
+                },
+                "description": "Delete your story\n\n`DELETE /api/stories/{id}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/stories/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "stories",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{storyId}}"
+                    }
+                  ]
+                },
+                "description": "Delete your story\n\n`DELETE /api/stories/{id}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Story not found\"\n}"
+            }
+          ]
         }
       ]
     },
     {
       "name": "Chats",
+      "description": "**Your chats**\n\n![Your chats](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/chats.png)\n\n**A chat, with a photo message**\n\n![A chat, with a photo message](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/chat.png)",
       "item": [
         {
           "name": "Your chats, most recently active first",
@@ -1170,7 +4990,65 @@
               ]
             },
             "description": "Your chats, most recently active first\n\n`GET /api/chats`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats"
+                  ]
+                },
+                "description": "Your chats, most recently active first\n\n`GET /api/chats`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"participants\": [\n        {\n          \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n          \"username\": \"ama.mensah\",\n          \"name\": \"Ama Mensah\",\n          \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n        }\n      ],\n      \"lastMessage\": {\n        \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n        \"chatId\": \"6705f3d4a9e4b3d7c8f01a45\",\n        \"senderId\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"text\": \"That view is unreal 😍\",\n        \"image\": \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\",\n        \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n        \"editedAt\": \"2026-10-10T09:30:00.000Z\"\n      },\n      \"unreadCount\": 12,\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n      \"updatedAt\": \"2026-10-10T09:30:00.000Z\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats"
+                  ]
+                },
+                "description": "Your chats, most recently active first\n\n`GET /api/chats`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "Open a chat with someone (returns the existing one if any)",
@@ -1198,6 +5076,119 @@
               }
             }
           },
+          "response": [
+            {
+              "name": "200 Existing chat",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats"
+                  ]
+                },
+                "description": "Open a chat with someone (returns the existing one if any)\n\n`POST /api/chats`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"{{userId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n    \"participants\": [\n      {\n        \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"username\": \"ama.mensah\",\n        \"name\": \"Ama Mensah\",\n        \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n      }\n    ],\n    \"lastMessage\": {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"chatId\": \"6705f3d4a9e4b3d7c8f01a45\",\n      \"senderId\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"text\": \"That view is unreal 😍\",\n      \"image\": \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\",\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n      \"editedAt\": \"2026-10-10T09:30:00.000Z\"\n    },\n    \"unreadCount\": 12,\n    \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n    \"updatedAt\": \"2026-10-10T09:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Invalid input",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats"
+                  ]
+                },
+                "description": "Open a chat with someone (returns the existing one if any)\n\n`POST /api/chats`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"{{userId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"userId is required\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats"
+                  ]
+                },
+                "description": "Open a chat with someone (returns the existing one if any)\n\n`POST /api/chats`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"{{userId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ],
           "event": [
             {
               "listen": "test",
@@ -1229,7 +5220,67 @@
               ]
             },
             "description": "Chats with unread messages (for a red dot)\n\n`GET /api/chats/unread`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/unread",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    "unread"
+                  ]
+                },
+                "description": "Chats with unread messages (for a red dot)\n\n`GET /api/chats/unread`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"chatIds\": [\n      \"chatIds\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/unread",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    "unread"
+                  ]
+                },
+                "description": "Chats with unread messages (for a red dot)\n\n`GET /api/chats/unread`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            }
+          ]
         },
         {
           "name": "Mark a chat read (also sent live to your other tabs as chat:read)",
@@ -1255,7 +5306,117 @@
               ]
             },
             "description": "Mark a chat read (also sent live to your other tabs as chat:read)\n\n`POST /api/chats/{id}/read`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/read",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "read"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Mark a chat read (also sent live to your other tabs as chat:read)\n\n`POST /api/chats/{id}/read`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"chatId\": \"6705f3d4a9e4b3d7c8f01a45\"\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/read",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "read"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Mark a chat read (also sent live to your other tabs as chat:read)\n\n`POST /api/chats/{id}/read`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/read",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "read"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Mark a chat read (also sent live to your other tabs as chat:read)\n\n`POST /api/chats/{id}/read`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Chat not found\"\n}"
+            }
+          ]
         },
         {
           "name": "A chat (members only)",
@@ -1280,7 +5441,114 @@
               ]
             },
             "description": "A chat (members only)\n\n`GET /api/chats/{id}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "A chat (members only)\n\n`GET /api/chats/{id}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n    \"participants\": [\n      {\n        \"id\": \"6705e9a1a9e4b3d7c8f01a02\",\n        \"username\": \"ama.mensah\",\n        \"name\": \"Ama Mensah\",\n        \"avatarUrl\": \"https://friendwave-api.onrender.com/api/media/avatars/ama.jpg\"\n      }\n    ],\n    \"lastMessage\": {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"chatId\": \"6705f3d4a9e4b3d7c8f01a45\",\n      \"senderId\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"text\": \"That view is unreal 😍\",\n      \"image\": \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\",\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n      \"editedAt\": \"2026-10-10T09:30:00.000Z\"\n    },\n    \"unreadCount\": 12,\n    \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n    \"updatedAt\": \"2026-10-10T09:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "A chat (members only)\n\n`GET /api/chats/{id}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "A chat (members only)\n\n`GET /api/chats/{id}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Chat not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Delete a chat and its messages",
@@ -1305,7 +5573,114 @@
               ]
             },
             "description": "Delete a chat and its messages\n\n`DELETE /api/chats/{id}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Delete a chat and its messages\n\n`DELETE /api/chats/{id}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": null\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Delete a chat and its messages\n\n`DELETE /api/chats/{id}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Delete a chat and its messages\n\n`DELETE /api/chats/{id}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Chat not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Messages, newest first",
@@ -1345,7 +5720,159 @@
               ]
             },
             "description": "Messages, newest first\n\n`GET /api/chats/{id}/messages`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 A page of results, newest first. Pass nextCursor as ?cursor= for the next page.",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "messages"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Messages, newest first\n\n`GET /api/chats/{id}/messages`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n      \"chatId\": \"6705f3d4a9e4b3d7c8f01a45\",\n      \"senderId\": \"6705e9a1a9e4b3d7c8f01a02\",\n      \"text\": \"That view is unreal 😍\",\n      \"image\": \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\",\n      \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n      \"editedAt\": \"2026-10-10T09:30:00.000Z\"\n    }\n  ],\n  \"nextCursor\": \"6705e0f2a9e4b3d7c8f00f99\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "messages"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Messages, newest first\n\n`GET /api/chats/{id}/messages`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "messages"
+                  ],
+                  "query": [
+                    {
+                      "key": "cursor",
+                      "value": "",
+                      "description": "nextCursor from the previous page",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Optional",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Messages, newest first\n\n`GET /api/chats/{id}/messages`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Chat not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Send a message: JSON { text }, or multipart with an image (and optional text). Also delivered live as message:new",
@@ -1389,6 +5916,220 @@
               ]
             }
           },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "messages"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Send a message: JSON { text }, or multipart with an image (and optional text). Also delivered live as message:new\n\n`POST /api/chats/{id}/messages`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": [],
+                      "description": "Image, max 5 MB"
+                    },
+                    {
+                      "key": "text",
+                      "type": "text",
+                      "value": "Hello from Postman 👋",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n    \"chatId\": \"6705f3d4a9e4b3d7c8f01a45\",\n    \"senderId\": \"6705e9a1a9e4b3d7c8f01a02\",\n    \"text\": \"That view is unreal 😍\",\n    \"image\": \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\",\n    \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n    \"editedAt\": \"2026-10-10T09:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Invalid input",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "messages"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Send a message: JSON { text }, or multipart with an image (and optional text). Also delivered live as message:new\n\n`POST /api/chats/{id}/messages`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": [],
+                      "description": "Image, max 5 MB"
+                    },
+                    {
+                      "key": "text",
+                      "type": "text",
+                      "value": "Hello from Postman 👋",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"text is required\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "messages"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Send a message: JSON { text }, or multipart with an image (and optional text). Also delivered live as message:new\n\n`POST /api/chats/{id}/messages`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": [],
+                      "description": "Image, max 5 MB"
+                    },
+                    {
+                      "key": "text",
+                      "type": "text",
+                      "value": "Hello from Postman 👋",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/chats/:id/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "chats",
+                    ":id",
+                    "messages"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{chatId}}"
+                    }
+                  ]
+                },
+                "description": "Send a message: JSON { text }, or multipart with an image (and optional text). Also delivered live as message:new\n\n`POST /api/chats/{id}/messages`",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": [],
+                      "description": "Image, max 5 MB"
+                    },
+                    {
+                      "key": "text",
+                      "type": "text",
+                      "value": "Hello from Postman 👋",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Chat not found\"\n}"
+            }
+          ],
           "event": [
             {
               "listen": "test",
@@ -1435,7 +6176,185 @@
                 }
               }
             }
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{messageId}}"
+                    }
+                  ]
+                },
+                "description": "Edit your message\n\n`PATCH /api/messages/{id}`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"6705f1c2a9e4b3d7c8f01a23\",\n    \"chatId\": \"6705f3d4a9e4b3d7c8f01a45\",\n    \"senderId\": \"6705e9a1a9e4b3d7c8f01a02\",\n    \"text\": \"That view is unreal 😍\",\n    \"image\": \"https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg\",\n    \"createdAt\": \"2026-10-10T09:30:00.000Z\",\n    \"editedAt\": \"2026-10-10T09:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Invalid input",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{messageId}}"
+                    }
+                  ]
+                },
+                "description": "Edit your message\n\n`PATCH /api/messages/{id}`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"text is required\"\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{messageId}}"
+                    }
+                  ]
+                },
+                "description": "Edit your message\n\n`PATCH /api/messages/{id}`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{messageId}}"
+                    }
+                  ]
+                },
+                "description": "Edit your message\n\n`PATCH /api/messages/{id}`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Message not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Delete your message",
@@ -1460,7 +6379,114 @@
               ]
             },
             "description": "Delete your message\n\n`DELETE /api/messages/{id}`"
-          }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{messageId}}"
+                    }
+                  ]
+                },
+                "description": "Delete your message\n\n`DELETE /api/messages/{id}`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": null\n}"
+            },
+            {
+              "name": "401 Missing, invalid or expired token",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{messageId}}"
+                    }
+                  ]
+                },
+                "description": "Delete your message\n\n`DELETE /api/messages/{id}`"
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid access token\"\n}"
+            },
+            {
+              "name": "404 Not found (or not yours)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/messages/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "messages",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{messageId}}"
+                    }
+                  ]
+                },
+                "description": "Delete your message\n\n`DELETE /api/messages/{id}`"
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"success\": false,\n  \"message\": \"Message not found\"\n}"
+            }
+          ]
         }
       ]
     }

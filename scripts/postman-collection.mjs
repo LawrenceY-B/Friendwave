@@ -73,6 +73,107 @@ function example(schema, name = "") {
   }
 }
 
+// A realistic sample response body for a JSON schema, shown as the "Example Response" in the docs
+const SAMPLE_IDS = { id: "6705f1c2a9e4b3d7c8f01a23", postId: "6705f0b7a9e4b3d7c8f01a11", chatId: "6705f3d4a9e4b3d7c8f01a45", senderId: "6705e9a1a9e4b3d7c8f01a02", userId: "6705e9a1a9e4b3d7c8f01a02" };
+const SAMPLE_STRINGS = {
+  username: "ama.mensah",
+  name: "Ama Mensah",
+  bio: "Coffee, film cameras and long walks ☕📷",
+  caption: "Golden hour at Labadi Beach 🌅",
+  text: "That view is unreal 😍",
+  message: "Something went wrong",
+  email: "ama@example.com",
+  nextCursor: "6705e0f2a9e4b3d7c8f00f99",
+};
+function sample(schema, name = "") {
+  schema = resolve(schema);
+  if (schema.example !== undefined) return schema.example;
+  if (schema.const !== undefined) return schema.const;
+  if (schema.enum) return schema.enum[0];
+  if (schema.allOf) return Object.assign({}, ...schema.allOf.map((s) => sample(s, name)));
+  if (schema.oneOf || schema.anyOf) return sample((schema.oneOf ?? schema.anyOf)[0], name);
+  const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+  const type = types.find((t) => t !== "null");
+  switch (type) {
+    case "object": {
+      const props = schema.properties ?? {};
+      const person = ["author", "actor", "participants", "data"].includes(name) && props.username;
+      return Object.fromEntries(Object.keys(props).map((k) => [k, k === "id" && person ? SAMPLE_IDS.userId : sample(props[k], k)]));
+    }
+    case "array":
+      if (/followedBy/.test(name)) return ["kofi.boateng", "efua_a"];
+      if (/images/.test(name)) return ["https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg"];
+      return [sample(schema.items, name)];
+    case "integer":
+    case "number":
+      return /count/i.test(name) ? 12 : schema.minimum ?? 1;
+    case "boolean":
+      return /^(isMe|read)$/.test(name) ? false : true;
+    case "string":
+      if (schema.format === "date-time") return name === "expiresAt" ? "2026-10-11T09:30:00.000Z" : "2026-10-10T09:30:00.000Z";
+      if (SAMPLE_IDS[name]) return SAMPLE_IDS[name];
+      if (/^id$|Id$/.test(name)) return SAMPLE_IDS.id;
+      if (/avatarUrl/.test(name)) return "https://friendwave-api.onrender.com/api/media/avatars/ama.jpg";
+      if (/imageUrl|^image$/.test(name)) return "https://friendwave-api.onrender.com/api/media/posts/6705f0b7-1.jpg";
+      if (/^url$|Url$/.test(name)) return "https://friendwave-api.onrender.com/api/media/uploads/6705f1c2.jpg";
+      if (types.includes("null") && !SAMPLE_STRINGS[name]) return null;
+      return SAMPLE_STRINGS[name] ?? name ?? "string";
+    default:
+      return null;
+  }
+}
+
+const REASONS = { 200: "OK", 201: "Created", 204: "No Content", 302: "Found", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found", 409: "Conflict", 503: "Service Unavailable" };
+// The messages the API really sends (src/lib/http.ts, src/middleware/isAuthorized.ts, validate.ts)
+const THINGS = { posts: "Post", comments: "Comment", chats: "Chat", messages: "Message", stories: "Story", notifications: "Notification", users: "User" };
+function errorMessage(code, apiPath, op) {
+  if (code === "401") return "Invalid access token";
+  if (code === "409") return "Username already taken";
+  const special = {
+    "POST /api/posts": "At least one image is required",
+    "DELETE /api/users/me": "Type your username exactly to confirm",
+    "PATCH /api/users/me": "bio length must be less than or equal to 150 characters long",
+  }[`${op.method} ${apiPath}`];
+  if (code === "400" && special) return special;
+  if (code === "404") {
+    if (apiPath.includes("{replyId}")) return "Reply not found";
+    if (apiPath.endsWith("/comments")) return "Post not found";
+    return `${THINGS[apiPath.split("/")[2]] ?? "Resource"} not found`;
+  }
+  const schema = resolve(op.requestBody?.content?.["application/json"]?.schema ?? op.requestBody?.content?.["multipart/form-data"]?.schema);
+  const field = (schema.required ?? [])[0];
+  return field ? `${field} is required` : "Invalid input";
+}
+
+// Saved example responses: the success response, plus the errors worth knowing for this request
+function examples(apiPath, op, originalRequest, hasPathParams, hasBody) {
+  const responses = op.responses ?? {};
+  const success = Object.keys(responses).find((c) => /^[23]/.test(c));
+  const authed = !(Array.isArray(op.security) && op.security.length === 0);
+  const errorCodes = Object.keys(responses).filter(
+    (c) => (c === "401" && authed) || (c === "404" && hasPathParams) || (c === "400" && hasBody) || c === "409" || c === "503",
+  );
+  return [success, ...errorCodes].filter(Boolean).map((code) => {
+    const res = responses[code];
+    const schema = res.content?.["application/json"]?.schema;
+    let bodyValue = schema ? sample(schema) : null;
+    if (bodyValue && bodyValue.success === false) bodyValue.message = errorMessage(code, apiPath, { ...op, method: originalRequest.method });
+    if (apiPath === "/health") bodyValue = code === "200" ? { status: "ok", db: true } : { status: "degraded", db: false };
+    if (apiPath === "/api/users/me" && bodyValue?.data?.isMe === false) bodyValue.data.isMe = true;
+    return {
+      name: `${code} ${res.description ?? REASONS[code] ?? ""}`.trim(),
+      originalRequest,
+      status: REASONS[code] ?? res.description ?? "",
+      code: Number(code),
+      _postman_previewlanguage: bodyValue ? "json" : "text",
+      header: code === "302"
+        ? [{ key: "Location", value: "https://friendwave-media.s3.amazonaws.com/posts/6705f0b7-1.jpg?X-Amz-Expires=3600" }]
+        : bodyValue ? [{ key: "Content-Type", value: "application/json; charset=utf-8" }] : [],
+      body: bodyValue ? JSON.stringify(bodyValue, null, 2) : "",
+    };
+  });
+}
+
 function body(requestBody) {
   if (!requestBody) return undefined;
   const content = requestBody.content ?? {};
@@ -133,6 +234,7 @@ function request(apiPath, method, op) {
   if (b) item.request.body = b;
   // Public routes (health, images) don't need the token
   if (Array.isArray(op.security) && op.security.length === 0) item.request.auth = { type: "noauth" };
+  item.response = examples(apiPath, op, item.request, pathParams.length > 0, Boolean(b));
   if (saves)
     item.event = [
       {
@@ -160,6 +262,20 @@ for (const [apiPath, methods] of Object.entries(openapi.paths)) {
   }
 }
 
+// Screens of the web app that use each folder's requests (docs/screenshots). The published docs
+// load them from GitHub; SCREENSHOTS_REF picks the commit or branch (default main).
+const SCREENSHOTS = {
+  Posts: [["feed", "Home feed"], ["post", "A post"]],
+  Users: [["profile", "Your profile"], ["search", "Search"], ["edit-profile", "Edit profile"]],
+  Notifications: [["notifications", "Notifications"]],
+  Comments: [["post", "Comments and replies"]],
+  Stories: [["stories", "Watching a story"]],
+  Chats: [["chats", "Your chats"], ["chat", "A chat, with a photo message"]],
+};
+const shotsBase = `https://raw.githubusercontent.com/LawrenceY-B/Friendwave/${process.env.SCREENSHOTS_REF ?? "main"}/docs/screenshots`;
+const folderDescription = (name) =>
+  (SCREENSHOTS[name] ?? []).map(([file, caption]) => `**${caption}**\n\n![${caption}](${shotsBase}/${file}.png)`).join("\n\n");
+
 const variables = ["postId", "commentId", "replyId", "chatId", "messageId", "storyId", "userId", "myId", "mediaKey"];
 const collection = {
   info: {
@@ -173,7 +289,7 @@ const collection = {
     { key: "token", value: "", description: "An Auth0 access token (npm run token)" },
     ...variables.map((key) => ({ key, value: "" })),
   ],
-  item: [...folders].map(([name, item]) => ({ name, item })),
+  item: [...folders].map(([name, item]) => ({ name, ...(SCREENSHOTS[name] ? { description: folderDescription(name) } : {}), item })),
 };
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
