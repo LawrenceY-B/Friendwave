@@ -39,7 +39,9 @@ export const fetchUserInfo = async (token: string): Promise<Auth0Profile> => {
     throw Object.assign(
       new Error(
         statusCode === 401
-          ? "Token can't read the user profile; request the 'openid profile email' scopes"
+          ? // Auth0 refused the token: usually the account was deleted (or the login expired), or the
+            // client didn't ask for the "openid profile email" scopes
+            "This login is no longer valid. Please log in again."
           : `Auth0 userinfo request failed (${response.status})`
       ),
       { statusCode }
