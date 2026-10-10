@@ -69,7 +69,19 @@ export const searchUsers = async (req: Request, res: Response) => {
     { $or: [{ Username: text }, { Name: text }] },
     pageFrom(req)
   );
-  sendPage(res, items.map(toUserSummary), nextCursor);
+  // Whether you follow each result, in one query for the whole page
+  const me = req.user.userID;
+  const followed = new Set(
+    (await Following.find({ userID: me, followingID: { $in: items.map((u) => u._id) } }).lean()).map((f) =>
+      String(f.followingID)
+    )
+  );
+  const results = items.map((user) => ({
+    ...toUserSummary(user)!,
+    isMe: String(user._id) === me,
+    isFollowing: followed.has(String(user._id)),
+  }));
+  sendPage(res, results, nextCursor);
 };
 
 // GET /users/:id

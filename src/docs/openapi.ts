@@ -69,6 +69,16 @@ export const openapi = {
           avatarUrl: { type: ["string", "null"] },
         },
       },
+      UserSearchResult: {
+        allOf: [
+          ref("UserSummary"),
+          {
+            type: "object",
+            required: ["isMe", "isFollowing"],
+            properties: { isMe: { type: "boolean" }, isFollowing: { type: "boolean" } },
+          },
+        ],
+      },
       Profile: {
         allOf: [
           ref("UserSummary"),
@@ -179,7 +189,7 @@ export const openapi = {
       get: op("Posts", "Your posts and posts of people you follow", { 200: page(ref("Post")) }, { parameters: pageParams }),
     },
     "/api/users": {
-      get: op("Users", "Search users by username or name", { 200: page(ref("UserSummary")) }, {
+      get: op("Users", "Search users by username or name", { 200: page(ref("UserSearchResult")) }, {
         parameters: [{ name: "search", in: "query", required: true, schema: { type: "string" } }, ...pageParams],
       }),
     },

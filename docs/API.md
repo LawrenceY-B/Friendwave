@@ -27,7 +27,7 @@ returns the same result, so a double-click can't break anything.
 |---|---|
 | `GET /api/users/me` | your profile (includes `email`) |
 | `PATCH /api/users/me` | multipart: `name`, `username`, `bio`, `avatar` (image). Send only what changes. 409 if the username is taken |
-| `GET /api/users?search=` | search by username or name |
+| `GET /api/users?search=` | search by username or name; each result has `isFollowing` and `isMe` |
 | `GET /api/users/:id` | a profile: counts, `isFollowing`, `isMe` |
 | `GET /api/users/:id/posts` | their posts |
 | `GET /api/users/:id/followers` / `following` | user lists |

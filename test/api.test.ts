@@ -85,7 +85,10 @@ describe("users", () => {
 
   it("searches users, treating regex characters literally", async () => {
     const res = await alice.get("/api/users?search=bo");
-    assert.ok(res.body.data.some((u: any) => u.username === "bob"));
+    const found = res.body.data.find((u: any) => u.username === "bob");
+    assert.ok(found);
+    assert.equal(found.isFollowing, false);
+    assert.equal(found.isMe, false);
     assert.equal(res.body.data[0].email, undefined);
     assert.deepEqual((await alice.get(`/api/users?search=${encodeURIComponent("(a+)+$")}`)).body.data, []);
     assert.equal((await alice.get("/api/users")).status, 400);
@@ -114,6 +117,8 @@ describe("users", () => {
     assert.equal((await bob.get(`/api/users/${bob.id}/followers`)).body.data[0].username, "Alice");
     assert.equal((await alice.get(`/api/users/${alice.id}/following`)).body.data.length, 1);
     assert.equal((await alice.get(`/api/users/${bob.id}`)).body.data.isFollowing, true);
+    const search = await alice.get("/api/users?search=bob");
+    assert.equal(search.body.data.find((u: any) => u.id === bob.id).isFollowing, true);
     assert.equal((await alice.del(`/api/users/${bob.id}/follow`)).body.data.followerCount, 0);
     assert.equal((await alice.post(`/api/users/${alice.id}/follow`)).status, 400);
     assert.equal((await alice.post("/api/users/aaaaaaaaaaaaaaaaaaaaaaaa/follow")).status, 404);
