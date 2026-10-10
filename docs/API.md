@@ -27,6 +27,7 @@ returns the same result, so a double-click can't break anything.
 |---|---|
 | `GET /api/users/me` | your profile (includes `email`) |
 | `PATCH /api/users/me` | multipart: `name`, `username`, `bio`, `avatar` (image). Send only what changes. 409 if the username is taken |
+| `DELETE /api/users/me` | `{ confirm: "<your username>" }` → deletes your account, everything of yours and your photos. `auth0Deleted` says whether your Auth0 login went too |
 | `GET /api/users?search=` | search by username or name; each result has `isFollowing` and `isMe` |
 | `GET /api/users/:id` | a profile: counts, `isFollowing`, `isMe` |
 | `GET /api/users/:id/posts` | their posts |
@@ -77,6 +78,7 @@ withdraws the notification; deleting a post removes its notifications.
 | `GET /api/chats` | `[{ id, participants, lastMessage, unreadCount, updatedAt }]`, most recent first |
 | `GET /api/chats/unread` | `{ chatIds }`: chats with unread messages (for a red dot on Chats) |
 | `POST /api/chats/:id/read` | mark it read (you opened it); your other tabs get `chat:read` |
+| `POST /api/chats/:id/messages` (multipart) | send a photo: `image` (max 5 MB) and optional `text`. Messages have `image` (URL or null) |
 | `POST /api/chats` | `{ userId }` → the existing chat (200) or a new one (201) |
 | `GET` / `DELETE /api/chats/:id` | one chat / delete it and its messages |
 | `GET` / `POST /api/chats/:id/messages` | history (newest first) / send `{ text }` |
@@ -117,6 +119,8 @@ socket.on("feed:new-post", ({ postId, authorId }) => {});  // someone you follow
 socket.on("notification:new", (notification) => {});
 socket.on("presence:update", ({ userId, online }) => {});  // someone you share a chat with
 socket.on("chat:read", ({ chatId }) => {});                // you read a chat (in another tab/device)
+socket.on("typing", ({ chatId, userId }) => {});           // they're typing (show "typing…" for a few seconds)
+socket.emit("typing", { chatId });                        // you're typing: send every few seconds while you are
 const res = await socket.emitWithAck("presence:query", { userIds }); // { success, data: { [id]: online } }, chat partners only
 ```
 

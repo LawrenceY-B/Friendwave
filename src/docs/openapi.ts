@@ -52,7 +52,7 @@ export const openapi = {
       "Listen for `message:new` / `message:updated` (Message), `message:deleted` ({ id, chatId }), " +
       "`post:counts` ({ postId, likeCount, commentCount }), `comment:new` ({ postId, comment }), `comment:deleted` ({ postId, commentId }), " +
       "`reply:new` ({ postId, commentId, reply }), `reply:deleted` ({ postId, commentId, replyId }), " +
-      "`feed:new-post` ({ postId, authorId }), `notification:new` (Notification), `presence:update` ({ userId, online }), `chat:read` ({ chatId }).",
+      "`feed:new-post` ({ postId, authorId }), `notification:new` (Notification), `presence:update` ({ userId, online }), `chat:read` ({ chatId }), `typing` ({ chatId, userId }; send `typing` { chatId } while typing).",
   },
   servers: [{ url: "http://localhost:4000" }],
   security: [{ bearer: [] }],
@@ -185,12 +185,13 @@ export const openapi = {
       },
       Message: {
         type: "object",
-        required: ["id", "chatId", "senderId", "text", "createdAt", "editedAt"],
+        required: ["id", "chatId", "senderId", "text", "image", "createdAt", "editedAt"],
         properties: {
           id: { type: "string" },
           chatId: { type: "string" },
           senderId: { type: "string" },
-          text: { type: "string" },
+          text: { type: "string", description: "Empty for a photo without a caption" },
+          image: { type: ["string", "null"], description: "Photo URL, if the message has one" },
           createdAt: { type: "string", format: "date-time" },
           editedAt: { type: ["string", "null"], format: "date-time" },
         },
@@ -230,6 +231,9 @@ export const openapi = {
     },
     "/api/users/me": {
       get: op("Users", "Your profile", { 200: ok(ref("Profile")) }),
+      delete: op("Users", "Delete your account and everything of yours (type your username to confirm)", {
+        200: ok({ type: "object", required: ["deleted", "auth0Deleted"], properties: { deleted: { type: "boolean" }, auth0Deleted: { type: "boolean", description: "Whether your Auth0 login was deleted too (needs the API's Auth0 Management credentials)" } } }),
+      }, { requestBody: { required: true, ...json({ type: "object", required: ["confirm"], properties: { confirm: { type: "string", description: "Your username" } } }) } }),
       patch: op("Users", "Update your profile (send only the fields you change)", { 200: ok(ref("Profile")), 409: { description: "Username taken", ...json(ref("Error")) } }, {
         requestBody: {
           content: {
@@ -361,7 +365,22 @@ export const openapi = {
     },
     "/api/chats/{id}/messages": {
       get: op("Chats", "Messages, newest first", { 200: page(ref("Message")) }, { parameters: [id(), ...pageParams] }),
-      post: op("Chats", "Send a message (also delivered live as message:new)", { 201: ok(ref("Message"), "Created") }, { parameters: [id()], requestBody: textBody }),
+      post: op("Chats", "Send a message: JSON { text }, or multipart with an image (and optional text). Also delivered live as message:new", { 201: ok(ref("Message"), "Created") }, {
+        parameters: [id()],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": textBody.content["application/json"],
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                required: ["image"],
+                properties: { image: { type: "string", format: "binary", description: "Image, max 5 MB" }, text: { type: "string" } },
+              },
+            },
+          },
+        },
+      }),
     },
     "/api/messages/{id}": {
       patch: op("Chats", "Edit your message", { 200: ok(ref("Message")) }, { parameters: [id()], requestBody: textBody }),

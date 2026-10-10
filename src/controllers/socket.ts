@@ -15,6 +15,7 @@ const isId = (value: unknown): value is string => typeof value === "string" && /
 //
 // Client → server:
 //   "message:send"   { chatId, text }, ack(response)
+//   "typing"         { chatId }    you're typing (send every few seconds while you are)
 //   "posts:watch"    { postIds }   subscribe to live updates for posts on screen
 //   "posts:unwatch"  { postIds }
 //   "presence:query" { userIds }, ack({ success, data: { [userId]: online } })  chat partners only
@@ -26,6 +27,7 @@ const isId = (value: unknown): value is string => typeof value === "string" && /
 //   "notification:new" Notification
 //   "presence:update" { userId, online }      to people you share a chat with
 //   "chat:read" { chatId }                     to yourself (other tabs/devices) when you read a chat
+//   "typing" { chatId, userId }                to the other people in the chat
 export default class SocketManager {
   constructor(private io: SocketIOServer) {
     this.setupAuth();
@@ -67,6 +69,24 @@ export default class SocketManager {
           if (!error.statusCode) Logger.error(error);
           reply({ success: false, message: error.statusCode ? error.message : "Message not sent" });
         }
+      });
+
+      // Typing: members only (checked once per chat, then remembered), at most once a second
+      const typingChats = new Map<string, { members: string[]; last: number }>();
+      socket.on("typing", async (data) => {
+        const chatId = String(data?.chatId ?? "");
+        if (!/^[0-9a-f]{24}$/.test(chatId)) return;
+        let entry = typingChats.get(chatId);
+        if (!entry) {
+          const chat = await Chat.findOne({ _id: chatId, members: userId }).select("members").lean();
+          if (!chat) return; // not your chat: ignore quietly
+          entry = { members: chat.members.map(String), last: 0 };
+          typingChats.set(chatId, entry);
+        }
+        const now = Date.now();
+        if (now - entry.last < 1000) return;
+        entry.last = now;
+        emitToUsers(entry.members.filter((m) => m !== userId), "typing", { chatId, userId });
       });
 
       socket.on("posts:watch", (data) => {

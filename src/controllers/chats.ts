@@ -6,6 +6,7 @@ import User from "../models/user.model";
 import { toChat, USER_SUMMARY_FIELDS } from "../lib/dto";
 import { badRequest, notFound, send } from "../lib/http";
 import { findChatForMember, markRead, unreadCounts } from "../services/chat.service";
+import { storage } from "../lib/s3";
 
 // Adds the other participants' names/pictures and each chat's last message,
 // using one query for all users and one for all last messages.
@@ -75,6 +76,8 @@ export const createChat = async (req: Request, res: Response) => {
 // DELETE /chats/:id. Members only; deletes its messages too.
 export const deleteChat = async (req: Request, res: Response) => {
   const chat = await findChatForMember(String(req.params.id), req.user.userID);
+  const photos = await Message.find({ chatId: chat._id, imageUrl: { $exists: true } }).select("imageUrl").lean();
   await Promise.all([Chat.deleteOne({ _id: chat._id }), Message.deleteMany({ chatId: chat._id })]);
+  if (photos.length) await storage.deleteImages(photos.map((m) => m.imageUrl!)).catch(() => {});
   send(res, null);
 };

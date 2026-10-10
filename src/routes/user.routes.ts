@@ -2,10 +2,10 @@ import { Router } from "express";
 import upload from "../middleware/upload";
 import { validate } from "../middleware/validate";
 import { idParams, limitOnly, pageOnly } from "../lib/validation";
-import { searchQuery, updateProfileBody } from "../services/user.service";
+import { deleteMeBody, searchQuery, updateProfileBody } from "../services/user.service";
 import {
   follow, getFollowers, getFollowing, getMe, getSavedPosts, getUser, getUserPosts,
-  getSuggestions, removeFollower, searchUsers, unfollow, updateMe,
+  getSuggestions, removeFollower, searchUsers, unfollow, updateMe, deleteMe,
 } from "../controllers/user";
 
 const UserRoutes = Router();
@@ -16,6 +16,7 @@ UserRoutes.get("/", validate({ query: searchQuery }), searchUsers);
 UserRoutes.get("/me", getMe);
 UserRoutes.get("/suggestions", validate({ query: limitOnly }), getSuggestions);
 UserRoutes.patch("/me", upload.single("avatar"), validate({ body: updateProfileBody }), updateMe);
+UserRoutes.delete("/me", validate({ body: deleteMeBody }), deleteMe);
 UserRoutes.get("/me/saved", validate({ query: pageOnly }), getSavedPosts);
 UserRoutes.delete("/me/followers/:id", validate({ params: idParams }), removeFollower);
 

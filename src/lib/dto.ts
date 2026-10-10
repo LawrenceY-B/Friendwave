@@ -70,7 +70,9 @@ export const toMessage = (message: Doc) => ({
   id: id(message._id),
   chatId: id(message.chatId),
   senderId: id(message.senderId),
-  text: message.message,
+  text: message.message ?? "",
+  // A photo, if the message has one (null otherwise)
+  image: mediaUrl(message.imageUrl),
   createdAt: message.createdAt,
   editedAt: message.editedAt ?? null,
 });

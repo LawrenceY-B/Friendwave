@@ -2,8 +2,7 @@ import { after, before, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { MongoClient, ObjectId, type Db } from "mongodb";
-// @ts-expect-error -- plain JS module (scripts/), no type declarations
-import { applyDeletion, backupFor, planDeletion } from "../scripts/lib/delete-users-core.mjs";
+import { applyDeletion, backupFor, findOrphans, planDeletion } from "../src/services/user-deletion";
 
 // scripts/delete-users.mjs: removes accounts and everything that points at them,
 // and leaves the kept accounts exactly as they were
@@ -104,7 +103,7 @@ describe("delete-users script", () => {
     assert.equal(plan.counts.comments, 2); // hetty's comment + the comment on hetty's post
     assert.equal(plan.counts.chats, 1);
     assert.equal(plan.counts.messages, 2);
-    assert.equal(plan.files, 3); // b.png, c.png, hetty's avatar
+    assert.deepEqual([...plan.mediaKeys].sort(), ["avatars/h.png", "b.png", "c.png"]); // hetty's photos + avatar
     assert.deepEqual(await snapshot(), before);
   });
 
@@ -138,6 +137,26 @@ describe("delete-users script", () => {
     await applyDeletion(db, plan);
     for (const name of ["users", "posts", "comments", "followings", "savedposts", "stories", "chats", "messages", "notifications"])
       assert.equal(await db.collection(name).countDocuments(), 0, `${name} should be empty`);
+  });
+
+  it("by id (deleting your own account) needs no names, and can be the last account", async () => {
+    await db.collection("users").deleteMany({ _id: { $in: [u.keep2, u.gone1, u.gone2] } });
+    const plan = await planDeletion(db, { userIds: [String(u.keep1)] });
+    assert.deepEqual(plan.targets.map((t: { Username: string }) => t.Username), ["lkuuybj"]);
+    assert.deepEqual(plan.mediaKeys, ["a.png"]);
+  });
+
+  it("finds S3 orphans: unreferenced and old enough", () => {
+    const now = new Date("2026-10-10T12:00:00Z");
+    const ago = (min: number) => new Date(now.getTime() - min * 60_000);
+    const objects = [
+      { key: "posts/u/kept.png", lastModified: ago(600) },
+      { key: "posts/u/orphan.png", lastModified: ago(600) },
+      { key: "chat/u/just-uploaded.png", lastModified: ago(5) },
+      { key: "profile/u/old-avatar.png", lastModified: ago(120) },
+    ];
+    const orphans = findOrphans(objects, new Set(["posts/u/kept.png"]), { now });
+    assert.deepEqual(orphans.map((o) => o.key), ["posts/u/orphan.png", "profile/u/old-avatar.png"]);
   });
 
   it("--delete names accounts directly", async () => {

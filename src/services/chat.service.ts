@@ -5,6 +5,7 @@ import Message from "../models/message.model";
 import { objectId } from "../lib/validation";
 import { toMessage } from "../lib/dto";
 import { emitToUsers } from "../lib/realtime";
+import { storage } from "../lib/s3";
 import { badRequest, notFound } from "../lib/http";
 
 export const createChatBody = joi.object({
@@ -13,6 +14,10 @@ export const createChatBody = joi.object({
 
 export const messageBody = joi.object({
   text: joi.string().trim().min(1).max(2000).required(),
+});
+// With a photo (multipart), the text is optional
+export const photoMessageBody = joi.object({
+  text: joi.string().trim().allow("").max(2000),
 });
 
 // Returns the chat only if the user is one of its members (404 otherwise, so
@@ -25,12 +30,14 @@ export const findChatForMember = async (chatId: string, userId: string) => {
 
 // Shared by POST /chats/:id/messages and the socket "message:send" event, so
 // both behave exactly the same: check membership, save, then push it live.
-export const sendMessage = async (chatId: string, senderId: string, text: string) => {
-  const { error, value } = messageBody.validate({ text });
+export const sendMessage = async (chatId: string, senderId: string, text: string, image?: Express.Multer.File) => {
+  const { error, value } = (image ? photoMessageBody : messageBody).validate({ text });
   if (error) throw badRequest(error.details[0].message.replace(/"/g, ""));
   const chat = await findChatForMember(chatId, senderId);
 
-  const saved = await Message.create({ chatId: chat._id, senderId, message: value.text });
+  // A photo goes to S3 first; the message keeps its key
+  const imageUrl = image ? await storage.uploadImage(image, "chat", senderId) : undefined;
+  const saved = await Message.create({ chatId: chat._id, senderId, message: value.text ?? "", imageUrl });
   // Bump the chat so the chat list can show the most recent conversation first. Replying means
   // you've read it; members with no read time yet (chats from before read tracking) get the
   // previous activity time, so this message counts as unread for them.

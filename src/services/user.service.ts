@@ -18,3 +18,6 @@ export const updateProfileBody = joi
       .messages({ "string.pattern.base": "username may only contain letters, numbers, . and _" }),
     bio: joi.string().allow("").max(150),
   });
+
+// DELETE /users/me: you type your username to confirm
+export const deleteMeBody = joi.object({ confirm: joi.string().trim().required() });

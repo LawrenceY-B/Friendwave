@@ -44,3 +44,12 @@ services:
       # Your Vercel site, e.g. https://friendwave-web.vercel.app (allowed to call the API)
       - key: CLIENT_ORIGIN
         sync: false
+      # Optional: only accept tokens issued to these Auth0 apps (the web app's client ID)
+      - key: AUTH0_ALLOWED_CLIENTS
+        sync: false
+      # Optional: an Auth0 Machine-to-Machine app (scope delete:users), so deleting your
+      # account also deletes your Auth0 login
+      - key: AUTH0_MGMT_CLIENT_ID
+        sync: false
+      - key: AUTH0_MGMT_CLIENT_SECRET
+        sync: false
