@@ -13,6 +13,9 @@ services:
     region: virginia
     # devDependencies (TypeScript) are needed to build, so NODE_ENV isn't set to production here
     buildCommand: npm ci && npm run build
+    # Deploy every push/merge to main
+    branch: main
+    autoDeployTrigger: commit
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -20,6 +23,10 @@ services:
         value: "22"
       - key: PROD_ENV
         value: Production
+      # mongodb-memory-server (tests only) downloads a whole MongoDB binary when installed;
+      # skip it on Render, where it made every build crawl
+      - key: MONGOMS_DISABLE_POSTINSTALL
+        value: "1"
       # Secrets and URLs: entered in the dashboard when the Blueprint is created
       - key: MONGODBURL
         sync: false
