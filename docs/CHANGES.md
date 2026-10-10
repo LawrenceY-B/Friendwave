@@ -400,12 +400,20 @@ Removed: `JWTKEY`, `AUTH0SECRET`, `AUTH0CLIENTID`, `AUTH0BASEURL`.
 | `RATE_LIMIT_PER_MINUTE` | `300` | Requests per minute per IP on `/api` |
 | `AUTH0_MGMT_CLIENT_ID` / `_SECRET` | none | Only for `scripts/link-accounts.mjs` |
 
-## Deploying on Render (later)
+## Deploying on Render
 
-- New **Web Service** from the GitHub repo.
-- Build command: `npm ci && npm run build`. Start command: `npm start`. Health check path: `/health`.
-- Add the variables from `.env` in the Render dashboard, **except** the `AUTH0_TEST_*` ones. Render sets
-  `PORT` itself. Set `API_URL` to the Render URL, and `CLIENT_ORIGIN` to your frontend's URL.
-- `PROD_ENV=Production` turns off debug logs and hides error details.
-- Render runs a long-lived server, so socket.io and the cron job work there (unlike Vercel's serverless functions).
-  On the free plan the service sleeps when idle, and cron jobs don't run while it's asleep.
+1. **Pick the region** in `render.yaml` (near your MongoDB Atlas cluster and your Vercel functions), commit, push.
+2. Render Dashboard → **New → Blueprint** → this repo. It reads `render.yaml` (build `npm ci && npm run build`,
+   start `npm start`, health check `/health`, Node 22, `PROD_ENV=Production`) and asks for the secrets:
+   `MONGODBURL`, `ISSUERBASEURL`, `AUTH0_AUDIENCE`, `AWS_ACCESS_KEY`, `AWS_SECRET_ACCESS_KEY`,
+   `API_URL` (this service's own `https://….onrender.com` URL) and `CLIENT_ORIGIN` (your Vercel URL).
+   Don't add `AUTH0_TEST_*` / `AUTH0_MGMT_*` (local scripts only) or `PORT` (Render sets it).
+3. **MongoDB Atlas → Network Access:** allow Render's outbound IPs (listed in the service's settings), or `0.0.0.0/0`.
+4. Check `https://….onrender.com/health` returns `{"status":"ok","db":true}`.
+
+Notes:
+- `NODE_ENV` is deliberately not set to `production` during the build, because `npm ci` would then skip
+  TypeScript (a devDependency), which the build needs.
+- Render runs a long-lived server, so socket.io (live chat) works there, unlike Vercel's serverless functions.
+- **Free plan:** the service sleeps after ~15 min idle. The first request then waits ~1 min (the frontend shows
+  "API offline" meanwhile), live chat sockets drop, and the daily log cleanup doesn't run. `plan: starter` stays awake.

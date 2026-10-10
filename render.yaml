@@ -1,0 +1,39 @@
+# Render Blueprint: Dashboard → New → Blueprint → pick this repo.
+# Render creates the service from this file and asks for every `sync: false` value
+# (secrets are never stored here). See docs/CHANGES.md → "Deploying on Render".
+services:
+  - type: web
+    name: friendwave-api
+    runtime: node
+    # Free instances sleep after ~15 min idle (first request then waits ~1 min,
+    # live chat sockets drop, the log-cleanup job doesn't run). "starter" stays awake.
+    plan: free
+    # Pick the region closest to your MongoDB Atlas cluster and your Vercel functions,
+    # e.g. frankfurt, oregon, ohio, virginia, singapore. Can't be changed later.
+    region: oregon
+    # devDependencies (TypeScript) are needed to build, so NODE_ENV isn't set to production here
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PROD_ENV
+        value: Production
+      # Secrets and URLs: entered in the dashboard when the Blueprint is created
+      - key: MONGODBURL
+        sync: false
+      - key: ISSUERBASEURL
+        sync: false
+      - key: AUTH0_AUDIENCE
+        sync: false
+      - key: AWS_ACCESS_KEY
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      # This service's own public URL, e.g. https://friendwave-api.onrender.com (used in image links)
+      - key: API_URL
+        sync: false
+      # Your Vercel site, e.g. https://friendwave-web.vercel.app (allowed to call the API)
+      - key: CLIENT_ORIGIN
+        sync: false
