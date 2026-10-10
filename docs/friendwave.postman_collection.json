@@ -253,6 +253,7 @@
     },
     {
       "name": "Posts",
+      "description": "**Home feed**\n\n![Home feed](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/feed.png)\n\n**A post**\n\n![A post](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/post.png)",
       "item": [
         {
           "name": "Your posts and posts of people you follow",
@@ -1685,6 +1686,7 @@
     },
     {
       "name": "Users",
+      "description": "**Your profile**\n\n![Your profile](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/profile.png)\n\n**Search**\n\n![Search](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/search.png)\n\n**Edit profile**\n\n![Edit profile](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/edit-profile.png)",
       "item": [
         {
           "name": "Search users by username or name",
@@ -3375,6 +3377,7 @@
     },
     {
       "name": "Notifications",
+      "description": "**Notifications**\n\n![Notifications](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/notifications.png)",
       "item": [
         {
           "name": "Your notifications, newest first",
@@ -3656,6 +3659,7 @@
     },
     {
       "name": "Comments",
+      "description": "**Comments and replies**\n\n![Comments and replies](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/post.png)",
       "item": [
         {
           "name": "Comments on a post, newest first",
@@ -4601,6 +4605,7 @@
     },
     {
       "name": "Stories",
+      "description": "**Watching a story**\n\n![Watching a story](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/stories.png)",
       "item": [
         {
           "name": "Live stories from you and people you follow, grouped by author",
@@ -4967,6 +4972,7 @@
     },
     {
       "name": "Chats",
+      "description": "**Your chats**\n\n![Your chats](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/chats.png)\n\n**A chat, with a photo message**\n\n![A chat, with a photo message](https://raw.githubusercontent.com/LawrenceY-B/Friendwave/main/docs/screenshots/chat.png)",
       "item": [
         {
           "name": "Your chats, most recently active first",

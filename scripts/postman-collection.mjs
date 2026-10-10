@@ -262,6 +262,20 @@ for (const [apiPath, methods] of Object.entries(openapi.paths)) {
   }
 }
 
+// Screens of the web app that use each folder's requests (docs/screenshots). The published docs
+// load them from GitHub; SCREENSHOTS_REF picks the commit or branch (default main).
+const SCREENSHOTS = {
+  Posts: [["feed", "Home feed"], ["post", "A post"]],
+  Users: [["profile", "Your profile"], ["search", "Search"], ["edit-profile", "Edit profile"]],
+  Notifications: [["notifications", "Notifications"]],
+  Comments: [["post", "Comments and replies"]],
+  Stories: [["stories", "Watching a story"]],
+  Chats: [["chats", "Your chats"], ["chat", "A chat, with a photo message"]],
+};
+const shotsBase = `https://raw.githubusercontent.com/LawrenceY-B/Friendwave/${process.env.SCREENSHOTS_REF ?? "main"}/docs/screenshots`;
+const folderDescription = (name) =>
+  (SCREENSHOTS[name] ?? []).map(([file, caption]) => `**${caption}**\n\n![${caption}](${shotsBase}/${file}.png)`).join("\n\n");
+
 const variables = ["postId", "commentId", "replyId", "chatId", "messageId", "storyId", "userId", "myId", "mediaKey"];
 const collection = {
   info: {
@@ -275,7 +289,7 @@ const collection = {
     { key: "token", value: "", description: "An Auth0 access token (npm run token)" },
     ...variables.map((key) => ({ key, value: "" })),
   ],
-  item: [...folders].map(([name, item]) => ({ name, item })),
+  item: [...folders].map(([name, item]) => ({ name, ...(SCREENSHOTS[name] ? { description: folderDescription(name) } : {}), item })),
 };
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
