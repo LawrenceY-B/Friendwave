@@ -132,6 +132,14 @@ describe("delete-users script", () => {
     assert.equal(after.notifications.length, 1);
   });
 
+  it("--all clears everything", async () => {
+    const plan = await planDeletion(db, { all: true });
+    assert.equal(plan.targets.length, 4);
+    await applyDeletion(db, plan);
+    for (const name of ["users", "posts", "comments", "followings", "savedposts", "stories", "chats", "messages", "notifications"])
+      assert.equal(await db.collection(name).countDocuments(), 0, `${name} should be empty`);
+  });
+
   it("--delete names accounts directly", async () => {
     const plan = await planDeletion(db, { remove: ["HETTY"] });
     assert.deepEqual(plan.targets.map((t: { Username: string }) => t.Username), ["hetty"]);
@@ -140,7 +148,9 @@ describe("delete-users script", () => {
   it("refuses a misspelt name, deleting everyone, or both flags", async () => {
     await assert.rejects(planDeletion(db, { keep: ["lkuuybj", "man.like.lawrnce"] }), /No user named man.like.lawrnce/);
     await assert.rejects(planDeletion(db, { remove: ["lkuuybj", "man.like.lawrence", "hetty", "glover"] }), /every account/);
-    await assert.rejects(planDeletion(db, { keep, remove: ["hetty"] }), /either --keep or --delete/);
+    await assert.rejects(planDeletion(db, { keep, remove: ["hetty"] }), /exactly one of/);
+    await assert.rejects(planDeletion(db, { keep, all: true }), /exactly one of/);
+    await assert.rejects(planDeletion(db, {}), /exactly one of/);
     assert.equal(await db.collection("users").countDocuments(), 4);
   });
 });

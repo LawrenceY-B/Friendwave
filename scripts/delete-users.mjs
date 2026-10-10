@@ -5,6 +5,7 @@
 //   node scripts/delete-users.mjs --keep lkuuybj,man.like.lawrence           dry run: shows who and what would go
 //   node scripts/delete-users.mjs --keep lkuuybj,man.like.lawrence --apply   for real
 //   node scripts/delete-users.mjs --delete hetty,glover [--apply]            or name the accounts to delete
+//   node scripts/delete-users.mjs --all [--apply]                            every account (a clean slate)
 //
 // Uses MONGODBURL from .env (it prints which database first). --apply writes a JSON backup
 // of everything it removes or edits to backups/ and then runs in one transaction.
@@ -21,6 +22,7 @@ const listArg = (flag) => (args.includes(flag) ? (args[args.indexOf(flag) + 1] ?
 const keep = listArg("--keep");
 const remove = listArg("--delete");
 const apply = args.includes("--apply");
+const all = args.includes("--all");
 
 await mongoose.connect(process.env.MONGODBURL);
 const db = mongoose.connection.db;
@@ -28,7 +30,8 @@ console.log(`Database: ${mongoose.connection.host} / ${db.databaseName}`);
 console.log(apply ? "APPLYING CHANGES\n" : "DRY RUN (nothing will change)\n");
 
 try {
-  const plan = await planDeletion(db, { keep, remove });
+  const plan = await planDeletion(db, { keep, remove, all });
+  if (all) console.log("--all: EVERY account and everything in it will be deleted\n");
   console.log(`Keeping (${plan.kept.length}):  ${plan.kept.map((u) => u.Username).join(", ")}`);
   console.log(`Deleting (${plan.targets.length}): ${plan.targets.map((u) => `${u.Username} (${u.Name})`).join(", ") || "nobody"}\n`);
   for (const [name, n] of Object.entries(plan.counts)) console.log(`  ${name.padEnd(36)} ${n}`);
