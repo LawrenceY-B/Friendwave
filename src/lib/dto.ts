@@ -79,7 +79,8 @@ export const toChat = (
   chat: Doc,
   viewerId: string,
   usersById: Map<string, Doc>,
-  lastMessage: Doc | null
+  lastMessage: Doc | null,
+  unreadCount = 0
 ) => ({
   id: id(chat._id),
   // The other people in the chat (not you)
@@ -88,6 +89,8 @@ export const toChat = (
     .map((member: Id) => toUserSummary(usersById.get(id(member))))
     .filter(Boolean),
   lastMessage: lastMessage ? toMessage(lastMessage) : null,
+  // Messages from the others you haven't read yet
+  unreadCount,
   createdAt: chat.createdAt,
   updatedAt: chat.updatedAt,
 });

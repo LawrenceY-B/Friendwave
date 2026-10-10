@@ -331,6 +331,86 @@ describe("chats and realtime messages", () => {
   });
 });
 
+describe("unread chats", () => {
+  let chatId: string;
+  const tick = () => new Promise((r) => setTimeout(r, 5)); // keep timestamps strictly ordered
+  const unreadOf = async (user: User, id: string) =>
+    (await user.get("/api/chats")).body.data.find((c: any) => c.id === id)?.unreadCount;
+
+  it("counts the other person's new messages, not your own", async () => {
+    chatId = (await carol.post("/api/chats", { userId: bob.id })).body.data.id;
+    assert.equal(await unreadOf(carol, chatId), 0);
+    await tick();
+    await bob.post(`/api/chats/${chatId}/messages`, { text: "one" });
+    await bob.post(`/api/chats/${chatId}/messages`, { text: "two" });
+    assert.equal(await unreadOf(carol, chatId), 2);
+    assert.equal(await unreadOf(bob, chatId), 0);
+    assert.equal((await carol.get(`/api/chats/${chatId}`)).body.data.unreadCount, 2);
+    assert.ok((await carol.get("/api/chats/unread")).body.data.chatIds.includes(chatId));
+    assert.ok(!(await bob.get("/api/chats/unread")).body.data.chatIds.includes(chatId));
+  });
+
+  it("marking it read clears it, and tells your other tabs", async () => {
+    const otherTab = await t.connectSocket(carol.token);
+    const told = nextEvent(otherTab, "chat:read");
+    const res = await carol.post(`/api/chats/${chatId}/read`);
+    assert.equal(res.status, 200);
+    assert.deepEqual(await told, { chatId });
+    assert.equal(await unreadOf(carol, chatId), 0);
+    assert.ok(!(await carol.get("/api/chats/unread")).body.data.chatIds.includes(chatId));
+  });
+
+  it("a new message is unread again; replying marks it read", async () => {
+    await tick();
+    await bob.post(`/api/chats/${chatId}/messages`, { text: "three" });
+    assert.equal(await unreadOf(carol, chatId), 1);
+    await tick();
+    await carol.post(`/api/chats/${chatId}/messages`, { text: "my reply" });
+    assert.equal(await unreadOf(carol, chatId), 0);
+    assert.equal(await unreadOf(bob, chatId), 1);
+  });
+
+  it("strangers can't mark someone else's chat read", async () => {
+    assert.equal((await alice.post(`/api/chats/${chatId}/read`)).status, 404);
+  });
+
+  it("chats from before read tracking start at 0, then count new messages", async () => {
+    const db = t.mongoose.connection.db!;
+    const { ObjectId } = t.mongoose.Types;
+    const past = new Date(Date.now() - 60_000);
+    const legacy = await db.collection("chats").insertOne({
+      members: [new ObjectId(alice.id), new ObjectId(carol.id)],
+      createdAt: past,
+      updatedAt: past,
+    });
+    await db.collection("messages").insertOne({
+      chatId: legacy.insertedId,
+      senderId: new ObjectId(alice.id),
+      message: "from before",
+      createdAt: new Date(past.getTime() - 1000),
+      updatedAt: new Date(past.getTime() - 1000),
+    });
+    const id = String(legacy.insertedId);
+    assert.equal(await unreadOf(carol, id), 0);
+    assert.equal(await unreadOf(alice, id), 0);
+    // A message of carol's from after that (old data, no read time recorded for it):
+    // unread for alice, never for carol herself
+    await db.collection("messages").insertOne({
+      chatId: legacy.insertedId,
+      senderId: new ObjectId(carol.id),
+      message: "carol, stored without a read time",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    assert.equal(await unreadOf(carol, id), 0);
+    assert.equal(await unreadOf(alice, id), 1);
+    await tick();
+    await alice.post(`/api/chats/${id}/messages`, { text: "new one" });
+    assert.equal(await unreadOf(carol, id), 1);
+    assert.equal(await unreadOf(alice, id), 0);
+  });
+});
+
 describe("system", () => {
   it("reports health", async () => {
     const res = await t.request("GET", "/health");
