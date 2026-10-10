@@ -6,17 +6,19 @@ const same = (a, b) => a.toLowerCase() === b.toLowerCase(); // usernames are uni
 // Works out who and what would be deleted, without changing anything.
 //   keep:   delete everyone EXCEPT these usernames
 //   remove: delete exactly these usernames
-export async function planDeletion(db, { keep, remove }) {
-  if (!keep === !remove) throw new Error("Give either --keep or --delete (not both)");
+//   all:    delete every account (a clean slate; must be asked for explicitly)
+export async function planDeletion(db, { keep, remove, all = false }) {
+  if ([keep, remove, all || undefined].filter(Boolean).length !== 1)
+    throw new Error("Give exactly one of --keep, --delete or --all");
   const users = await db.collection("users").find({}, { projection: { Username: 1, Name: 1, ProfileUrl: 1 } }).toArray();
-  const names = keep ?? remove;
+  const names = keep ?? remove ?? [];
   const missing = names.filter((n) => !users.some((u) => same(u.Username, n)));
   if (missing.length) throw new Error(`No user named ${missing.join(", ")}. Check the spelling; nothing was deleted.`);
 
   const listed = (u) => names.some((n) => same(u.Username, n));
-  const targets = users.filter((u) => (keep ? !listed(u) : listed(u)));
+  const targets = all ? users : users.filter((u) => (keep ? !listed(u) : listed(u)));
   const kept = users.filter((u) => !targets.includes(u));
-  if (kept.length === 0) throw new Error("That would delete every account; refusing.");
+  if (kept.length === 0 && !all) throw new Error("That would delete every account; use --all if that's really what you want.");
 
   const ids = targets.map((u) => u._id);
   const idStrings = ids.map(String);
