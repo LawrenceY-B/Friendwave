@@ -11,7 +11,8 @@ export interface IChats {
 export interface IMessage {
   chatId: Types.ObjectId;
   senderId: Types.ObjectId;
-  message: string;
+  message: string; // "" for a photo without a caption
+  imageUrl?: string; // S3 key of a photo, if the message has one
   editedAt?: Date;
   createdAt: Date;
 }

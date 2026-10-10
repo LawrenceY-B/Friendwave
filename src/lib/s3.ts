@@ -17,7 +17,7 @@ const s3 = new S3Client({
   region: environment.AWS_REGION,
 });
 
-export const MEDIA_FOLDERS = ["posts", "profile"] as const;
+export const MEDIA_FOLDERS = ["posts", "profile", "chat"] as const;
 type MediaFolder = (typeof MEDIA_FOLDERS)[number];
 
 // Uploads a file and returns its S3 key (e.g. "posts/<user>/<uuid>.jpeg").

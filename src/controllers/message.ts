@@ -5,6 +5,7 @@ import { toMessage } from "../lib/dto";
 import { notFound, pageFrom, paginate, send, sendPage } from "../lib/http";
 import { emitToUsers } from "../lib/realtime";
 import { findChatForMember, sendMessage } from "../services/chat.service";
+import { storage } from "../lib/s3";
 
 // GET /chats/:id/messages. Newest first; use nextCursor to load older ones.
 export const getMessages = async (req: Request, res: Response) => {
@@ -17,9 +18,10 @@ export const getMessages = async (req: Request, res: Response) => {
   sendPage(res, items.map(toMessage), nextCursor);
 };
 
-// POST /chats/:id/messages  { text }. Also delivered live as "message:new".
+// POST /chats/:id/messages  { text } as JSON, or multipart with an `image` (and optional
+// `text`) to send a photo. Also delivered live as "message:new".
 export const createMessage = async (req: Request, res: Response) => {
-  send(res, await sendMessage(String(req.params.id), req.user.userID, req.body.text), 201);
+  send(res, await sendMessage(String(req.params.id), req.user.userID, req.body.text ?? "", req.file), 201);
 };
 
 // Finds a message the current user sent (anyone else gets "not found")
@@ -49,6 +51,7 @@ export const editMessage = async (req: Request, res: Response) => {
 export const deleteMessage = async (req: Request, res: Response) => {
   const own = await findOwnMessage(String(req.params.id), req.user.userID);
   await Message.deleteOne({ _id: own._id });
+  if (own.imageUrl) await storage.deleteImages([own.imageUrl]).catch(() => {}); // the photo too
   emitToUsers(await membersOf(own.chatId), "message:deleted", { id: String(own._id), chatId: String(own.chatId) });
   send(res, null);
 };

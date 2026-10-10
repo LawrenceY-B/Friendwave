@@ -9,6 +9,8 @@
     "build": "tsc",
     "token": "node scripts/get-token.mjs",
     "postman": "node --import tsx scripts/postman-collection.mjs",
+    "delete-users": "node --import tsx scripts/delete-users.mjs",
+    "cleanup-s3": "node --import tsx scripts/cleanup-s3.mjs",
     "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts"
   },
   "keywords": [],

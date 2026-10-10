@@ -411,6 +411,132 @@ describe("unread chats", () => {
   });
 });
 
+describe("chat photos and typing", () => {
+  let frank: User, gina: User, chatId: string;
+  const photo = (text?: string) => {
+    const form = imageForm(0);
+    form.append("image", new Blob([Buffer.from("fake image bytes")], { type: "image/png" }), "photo.png");
+    if (text !== undefined) form.append("text", text);
+    return form;
+  };
+
+  before(async () => {
+    frank = await t.login("auth0|frank", { nickname: "frank" });
+    gina = await t.login("auth0|gina", { nickname: "gina" });
+    chatId = (await frank.post("/api/chats", { userId: gina.id })).body.data.id;
+  });
+
+  it("sends a photo with a caption, delivered live", async () => {
+    const ginaSocket = await t.connectSocket(gina.token);
+    const got = nextEvent(ginaSocket, "message:new");
+    const res = await frank.post(`/api/chats/${chatId}/messages`, photo("look at this"));
+    assert.equal(res.status, 201);
+    assert.match(res.body.data.image, /^http:\/\/api\.test\/api\/media\/chat\/[0-9a-f]{24}\//);
+    assert.equal(res.body.data.text, "look at this");
+    assert.equal((await got).image, res.body.data.image);
+  });
+
+  it("a photo needs no text; text-only messages still work; nothing at all is a 400", async () => {
+    const onlyPhoto = await frank.post(`/api/chats/${chatId}/messages`, photo());
+    assert.equal(onlyPhoto.status, 201);
+    assert.equal(onlyPhoto.body.data.text, "");
+    const onlyText = await frank.post(`/api/chats/${chatId}/messages`, { text: "plain text" });
+    assert.equal(onlyText.status, 201);
+    assert.equal(onlyText.body.data.image, null);
+    assert.equal((await frank.post(`/api/chats/${chatId}/messages`, { text: "" })).status, 400);
+    assert.equal((await frank.post(`/api/chats/${chatId}/messages`, imageForm(0))).status, 400);
+  });
+
+  it("deleting a photo message deletes the file too", async () => {
+    const sent = (await frank.post(`/api/chats/${chatId}/messages`, photo())).body.data;
+    const key = sent.image.split("/api/media/")[1];
+    assert.equal((await frank.del(`/api/messages/${sent.id}`)).status, 200);
+    assert.ok(t.deletedKeys.includes(key));
+  });
+
+  it("typing reaches the other person only, and strangers can't fake it", async () => {
+    const [ginaSocket, frankSocket, strangerSocket] = await Promise.all([
+      t.connectSocket(gina.token),
+      t.connectSocket(frank.token),
+      t.connectSocket(carol.token),
+    ]);
+    const ginaHears = nextEvent(ginaSocket, "typing");
+    const frankHears = nextEvent(frankSocket, "typing", 600).then(() => "heard", () => "silent");
+    frankSocket.emit("typing", { chatId });
+    assert.deepEqual(await ginaHears, { chatId, userId: frank.id });
+    assert.equal(await frankHears, "silent");
+    const ginaHearsStranger = nextEvent(ginaSocket, "typing", 600).then(() => "heard", () => "silent");
+    strangerSocket.emit("typing", { chatId });
+    assert.equal(await ginaHearsStranger, "silent");
+  });
+});
+
+describe("allowed apps (azp)", () => {
+  it("only tokens from the listed apps work when a list is set", async () => {
+    const { environment } = await import("../src/environments/endpoints.config");
+    const fromWeb = await t.sign("auth0|alice", { azp: "web-app" });
+    const fromTestApp = await t.sign("auth0|alice", { azp: "test-app" });
+    try {
+      environment.AUTH0_ALLOWED_CLIENTS = ["web-app"];
+      assert.equal((await t.request("GET", "/api/users/me", fromWeb)).status, 200);
+      const refused = await t.request("GET", "/api/users/me", fromTestApp);
+      assert.equal(refused.status, 401);
+      assert.match(refused.body.message, /isn't allowed/);
+    } finally {
+      environment.AUTH0_ALLOWED_CLIENTS = [];
+    }
+    assert.equal((await t.request("GET", "/api/users/me", fromTestApp)).status, 200); // no list: any app
+  });
+});
+
+describe("deleting your account", () => {
+  it("needs your username to confirm", async () => {
+    const hal = await t.login("auth0|hal", { nickname: "hal" });
+    assert.equal((await t.request("DELETE", "/api/users/me", hal.token, { confirm: "nope" })).status, 400);
+    assert.equal((await t.request("DELETE", "/api/users/me", hal.token, {})).status, 400);
+    assert.equal((await hal.get("/api/users/me")).status, 200);
+  });
+
+  it("deletes everything of yours and your photos; others are untouched", async () => {
+    const ivy = await t.login("auth0|ivy", { nickname: "ivy", picture: "https://pics.test/ivy.png" });
+    const post = (await ivy.post("/api/posts", imageForm(2, { caption: "ivy's post" }))).body.data;
+    const keys = post.images.map((u: string) => u.split("/api/media/")[1]);
+    await bob.post(`/api/posts/${post.id}/comments`, { text: "nice" });
+    await ivy.post(`/api/users/${bob.id}/follow`);
+    const chat = (await ivy.post("/api/chats", { userId: bob.id })).body.data.id;
+    await ivy.post(`/api/chats/${chat}/messages`, { text: "hi bob" });
+    const bobPostsBefore = (await bob.get(`/api/users/${bob.id}/posts`)).body.data.length;
+
+    const res = await t.request("DELETE", "/api/users/me", ivy.token, { confirm: "IVY" });
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.data, { deleted: true, auth0Deleted: false });
+    for (const key of keys) assert.ok(t.deletedKeys.includes(key), `${key} should be deleted from S3`);
+    assert.equal((await bob.get(`/api/posts/${post.id}`)).status, 404);
+    assert.ok(!(await bob.get("/api/chats")).body.data.some((c: any) => c.id === chat));
+    assert.ok(!(await bob.get(`/api/users/${bob.id}/followers`)).body.data.some((u: any) => u.username === "ivy"));
+    assert.equal((await bob.get(`/api/users/${bob.id}/posts`)).body.data.length, bobPostsBefore);
+    // Without Auth0 Management credentials the login still exists: a new, empty profile
+    const again = await ivy.get("/api/users/me");
+    assert.equal(again.status, 200);
+    assert.equal(again.body.data.postCount, 0);
+  });
+
+  it("with Auth0 Management credentials, the Auth0 login is deleted too", async () => {
+    const { environment } = await import("../src/environments/endpoints.config");
+    const jay = await t.login("auth0|jay", { nickname: "jay" });
+    try {
+      environment.AUTH0_MGMT_CLIENT_ID = "mgmt-id";
+      environment.AUTH0_MGMT_CLIENT_SECRET = "mgmt-secret";
+      const res = await t.request("DELETE", "/api/users/me", jay.token, { confirm: "jay" });
+      assert.deepEqual(res.body.data, { deleted: true, auth0Deleted: true });
+      assert.ok(t.auth0Deleted.includes("auth0|jay"));
+    } finally {
+      environment.AUTH0_MGMT_CLIENT_ID = "";
+      environment.AUTH0_MGMT_CLIENT_SECRET = "";
+    }
+  });
+});
+
 describe("system", () => {
   it("reports health", async () => {
     const res = await t.request("GET", "/health");

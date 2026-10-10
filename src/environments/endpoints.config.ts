@@ -34,6 +34,16 @@ export const environment = {
   AWS_BUCKET: process.env.AWS_BUCKET || "fwstorage-trial",
   // Origin allowed to call the API / socket from a browser, e.g. https://friendwave.app
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || "*",
+  // Optional: only accept tokens issued to these Auth0 applications (comma-separated client
+  // IDs, e.g. the Friendwave web app). Empty = any app with a valid token for this API.
+  AUTH0_ALLOWED_CLIENTS: (process.env.AUTH0_ALLOWED_CLIENTS ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean),
+  // Optional: an Auth0 Machine-to-Machine app with the delete:users scope, so deleting
+  // your account also deletes your Auth0 login. Without it, only Friendwave data is deleted.
+  AUTH0_MGMT_CLIENT_ID: process.env.AUTH0_MGMT_CLIENT_ID ?? "",
+  AUTH0_MGMT_CLIENT_SECRET: process.env.AUTH0_MGMT_CLIENT_SECRET ?? "",
   // Requests per minute per IP for /api (images and /health aren't limited)
   RATE_LIMIT_PER_MINUTE: Number(process.env.RATE_LIMIT_PER_MINUTE) || 300,
 };

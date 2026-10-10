@@ -1,7 +1,8 @@
 import { Router } from "express";
+import upload from "../middleware/upload";
 import { validate } from "../middleware/validate";
 import { idParams, pageOnly } from "../lib/validation";
-import { createChatBody, messageBody } from "../services/chat.service";
+import { createChatBody } from "../services/chat.service";
 import { createChat, deleteChat, getChat, getChats, getUnreadChats, readChat } from "../controllers/chats";
 import { createMessage, getMessages } from "../controllers/message";
 
@@ -14,6 +15,7 @@ ChatRoutes.post("/:id/read", validate({ params: idParams }), readChat);
 ChatRoutes.get("/:id", validate({ params: idParams }), getChat);
 ChatRoutes.delete("/:id", validate({ params: idParams }), deleteChat);
 ChatRoutes.get("/:id/messages", validate({ params: idParams, query: pageOnly }), getMessages);
-ChatRoutes.post("/:id/messages", validate({ params: idParams, body: messageBody }), createMessage);
+// JSON { text }, or multipart with an image (validated in sendMessage, since the body differs)
+ChatRoutes.post("/:id/messages", upload.single("image"), validate({ params: idParams }), createMessage);
 
 export default ChatRoutes;

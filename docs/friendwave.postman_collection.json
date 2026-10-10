@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Friendwave API",
-    "description": "Send an Auth0 access token as `Authorization: Bearer <token>`. The first request from a new user creates their account. Successful responses are `{ success: true, data }`; errors are `{ success: false, message }`. Realtime (socket.io): connect with `io(API_URL, { auth: { token } })`. Emit `message:send` { chatId, text } (ack); `posts:watch` / `posts:unwatch` { postIds } to subscribe to live updates for posts on screen; `presence:query` { userIds } (ack → { [id]: online }, chat partners only). Listen for `message:new` / `message:updated` (Message), `message:deleted` ({ id, chatId }), `post:counts` ({ postId, likeCount, commentCount }), `comment:new` ({ postId, comment }), `comment:deleted` ({ postId, commentId }), `reply:new` ({ postId, commentId, reply }), `reply:deleted` ({ postId, commentId, replyId }), `feed:new-post` ({ postId, authorId }), `notification:new` (Notification), `presence:update` ({ userId, online }), `chat:read` ({ chatId }).\n\nGenerated from the API's OpenAPI spec by `npm run postman`. Set `baseUrl` and `token` in the collection variables. Creating things saves their ids for the next requests.",
+    "description": "Send an Auth0 access token as `Authorization: Bearer <token>`. The first request from a new user creates their account. Successful responses are `{ success: true, data }`; errors are `{ success: false, message }`. Realtime (socket.io): connect with `io(API_URL, { auth: { token } })`. Emit `message:send` { chatId, text } (ack); `posts:watch` / `posts:unwatch` { postIds } to subscribe to live updates for posts on screen; `presence:query` { userIds } (ack → { [id]: online }, chat partners only). Listen for `message:new` / `message:updated` (Message), `message:deleted` ({ id, chatId }), `post:counts` ({ postId, likeCount, commentCount }), `comment:new` ({ postId, comment }), `comment:deleted` ({ postId, commentId }), `reply:new` ({ postId, commentId, reply }), `reply:deleted` ({ postId, commentId, replyId }), `feed:new-post` ({ postId, authorId }), `notification:new` (Notification), `presence:update` ({ userId, online }), `chat:read` ({ chatId }), `typing` ({ chatId, userId }; send `typing` { chatId } while typing).\n\nGenerated from the API's OpenAPI spec by `npm run postman`. Set `baseUrl` and `token` in the collection variables. Creating things saves their ids for the next requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -501,6 +501,34 @@
               }
             }
           ]
+        },
+        {
+          "name": "Delete your account and everything of yours (type your username to confirm)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Delete your account and everything of yours (type your username to confirm)\n\n`DELETE /api/users/me`",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirm\": \"confirm\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
         },
         {
           "name": "Update your profile (send only the fields you change)",
@@ -1320,7 +1348,7 @@
           }
         },
         {
-          "name": "Send a message (also delivered live as message:new)",
+          "name": "Send a message: JSON { text }, or multipart with an image (and optional text). Also delivered live as message:new",
           "request": {
             "method": "POST",
             "header": [],
@@ -1342,15 +1370,23 @@
                 }
               ]
             },
-            "description": "Send a message (also delivered live as message:new)\n\n`POST /api/chats/{id}/messages`",
+            "description": "Send a message: JSON { text }, or multipart with an image (and optional text). Also delivered live as message:new\n\n`POST /api/chats/{id}/messages`",
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"text\": \"Hello from Postman 👋\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": [],
+                  "description": "Image, max 5 MB"
+                },
+                {
+                  "key": "text",
+                  "type": "text",
+                  "value": "Hello from Postman 👋",
+                  "disabled": true
                 }
-              }
+              ]
             }
           },
           "event": [

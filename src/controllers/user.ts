@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import User, { USERNAME_COLLATION } from "../models/user.model";
 import Following from "../models/following.model";
 import Post from "../models/post.model";
@@ -11,6 +11,8 @@ import { badRequest, conflict, notFound, pageFrom, paginate, send, sendPage } fr
 import { buildPosts, POST_AUTHOR } from "../services/post.service";
 import Logger from "../lib/logger";
 import { notify, unnotify } from "../services/notification.service";
+import { applyDeletion, planDeletion } from "../services/user-deletion";
+import { canDeleteAuth0Users, deleteAuth0User } from "../lib/auth0";
 
 // Counts come straight from the collections, so they can never drift out of sync
 const loadProfile = async (userId: string, viewerId: string) => {
@@ -225,4 +227,34 @@ export const getSuggestions = async (req: Request, res: Response) => {
       )
     );
   send(res, results);
+};
+
+// DELETE /users/me  { confirm: "<your username>" }. Deletes your account and everything of
+// yours: posts (and what's on them), comments, replies, likes, follows, saves, stories,
+// chats and notifications, plus your photos on S3. If the API has Auth0 Management
+// credentials, your Auth0 login is deleted too; otherwise a new, empty profile would be
+// created if you logged in again with it.
+export const deleteMe = async (req: Request, res: Response) => {
+  const me = await User.findById(req.user.userID).select("Username").lean();
+  if (!me) throw notFound("User");
+  if (String(req.body.confirm).toLowerCase() !== me.Username.toLowerCase())
+    throw badRequest("Type your username exactly to confirm");
+
+  const db = mongoose.connection.db!;
+  const plan = await planDeletion(db, { userIds: [req.user.userID] });
+  await applyDeletion(db, plan);
+  // Photos: after the data, so a failure here never leaves a broken account behind
+  for (let i = 0; i < plan.mediaKeys.length; i += 1000)
+    await storage.deleteImages(plan.mediaKeys.slice(i, i + 1000)).catch((error) => Logger.error(error));
+
+  let auth0Deleted = false;
+  if (canDeleteAuth0Users()) {
+    try {
+      await deleteAuth0User(req.user.Auth0id);
+      auth0Deleted = true;
+    } catch (error) {
+      Logger.error(error); // your data is gone either way; the login can be removed by hand
+    }
+  }
+  send(res, { deleted: true, auth0Deleted });
 };
