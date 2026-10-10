@@ -72,6 +72,7 @@ All database scripts do a dry run unless given `--apply`, and write a backup to 
 | `link-accounts.mjs` | link two Auth0 logins of one person |
 | `merge-users.mjs` | merge Friendwave accounts after linking |
 | `cleanup-data.mjs` | repair broken references, misplaced messages, old image links |
+| `delete-users.mjs` | delete accounts and everything of theirs: `--keep a,b` (everyone else) or `--delete a,b` |
 | `migrate-v2.mjs` | one-off migration to the v2 data model (done 2026-10-09) |
 
 See [docs/CHANGES.md](docs/CHANGES.md) for the October 2026 upgrade notes and lessons, and deployment notes (Render).
